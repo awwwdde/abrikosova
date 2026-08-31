@@ -1,0 +1,77 @@
+# Только для локальной разработки.
+# Порты на хосте переопределяются через app/.env (см. .env.example) — на случай,
+# когда 5432/8000 уже заняты другим проектом на той же машине.
+# На проде (Timeweb Cloud) postgres и redis — управляемые сервисы,
+# см. new/spec/00-overview.md, раздел «Инфраструктура».
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: abrikosova
+      POSTGRES_PASSWORD: abrikosova
+      POSTGRES_DB: abrikosova
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U abrikosova"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      target: dev
+    env_file:
+      - ./apps/api/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://abrikosova:abrikosova@postgres:5432/abrikosova
+      REDIS_URL: redis://redis:6379/0
+    # Воспроизводимое окружение с первого дня: миграции и сид накатываются на старте
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m app.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "${API_HOST_PORT:-8000}:8000"
+    volumes:
+      - ./apps/api:/srv
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web
+      target: dev
+    env_file:
+      - ./apps/web/.env
+    environment:
+      API_URL: http://api:8000/api/v1
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "${WEB_HOST_PORT:-3000}:3000"
+    volumes:
+      - ./apps/web:/srv
+      - /srv/node_modules
+      - /srv/.next
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

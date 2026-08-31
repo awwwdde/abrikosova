@@ -1,0 +1,29 @@
+# --- секреты: первым делом, чтобы утечка кредов из старого проекта была невозможна физически ---
+.env
+.env.*
+!.env.example
+
+# --- node / next ---
+node_modules/
+.next/
+out/
+build/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- прочее ---
+.DS_Store
+Thumbs.db
+*.log
+/media/
+/backups/

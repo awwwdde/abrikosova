@@ -11,8 +11,8 @@
 | Метод | Путь | Назначение |
 |---|---|---|
 | GET | `/catalog/categories` | Дерево категорий с подкатегориями (`is_active=true`), для меню/сайдбара каталога |
-| GET | `/catalog/products` | Список товаров с фильтрами: `category`, `subcategory`, `search` (по названию), `sort` (`price_asc`, `price_desc`, `name`, `new`), пагинация |
-| GET | `/catalog/products/{slug}` | Карточка товара: все поля + `images[]` + `related_products[]` (та же подкатегория, до 4 шт., как в старой логике) + `fillings[]`, если товар относится к тортам (флаг `applies_fillings` на товаре или на подкатегории — заменяет хрупкую проверку по ключевым словам в названии из старого кода, см. `ANALYSIS.md`) |
+| GET | `/catalog/products` | Список товаров с фильтрами: `category`, `subcategory`, `search` (по названию), `sort` (`price_asc`, `price_desc`, `name`, `new`), `is_featured` (bool — используется главной страницей для блока «Популярные позиции», см. `03-pages-wireframes.md`), пагинация |
+| GET | `/catalog/products/{slug}` | Карточка товара: все поля + `images[]` + `related_products[]` (та же подкатегория, до 4 шт., как в старой логике) + `fillings[]`, если подкатегория товара помечена `applies_fillings=true` (флаг на `SubCategory`, см. `01-data-model.md` — заменяет хрупкую проверку по ключевым словам в названии из старого кода, см. `ANALYSIS.md`) |
 
 ### Торты на заказ
 
@@ -28,6 +28,12 @@
 | GET | `/gallery` | Список активных «Примеров работ», с пагинацией |
 | GET | `/reviews` | Список опубликованных отзывов (`is_published=true`), с пагинацией |
 | GET | `/pages/{page_key}` | Контент статичной страницы (`home`, `about`, `contacts`) — используется в `generateStaticParams`/ISR на фронте |
+
+### Контакты
+
+| Метод | Путь | Назначение |
+|---|---|---|
+| POST | `/contacts/feedback` | Форма обратной связи со страницы «Контакты»: `{ name, phone, message?, consent_pd }`. Создаёт запись в `ConsultationRequest` с `source=contact_page` (см. `01-data-model.md` и примечание в `03-pages-wireframes.md`, страница «Контакты») — та же таблица, что и заявки на консультацию по тортам, но отдельный путь и отдельная точка для rate limiting |
 
 ### Корзина (гостевая, без авторизации)
 
@@ -72,7 +78,7 @@
 | Отзывы | `GET /admin/reviews` (все, включая неопубликованные), `PATCH /admin/reviews/{id}` (публикация/скрытие), `DELETE` |
 | Контент страниц | `GET/PUT /admin/pages/{page_key}` |
 | Заказы | `GET /admin/orders` (список с фильтром по статусу/дате), `GET /admin/orders/{id}`, `PATCH /admin/orders/{id}` (смена статуса) |
-| Заявки на консультацию | `GET /admin/consultations`, `PATCH /admin/consultations/{id}` (смена статуса) |
+| Заявки на консультацию | `GET /admin/consultations` (с фильтром по `source` — `custom_cake`/`contact_page`, чтобы в списке было видно, с какой формы пришла заявка), `PATCH /admin/consultations/{id}` (смена статуса) |
 | Пользователи | `GET/POST /admin/users`, `PATCH/DELETE /admin/users/{id}` — доступно только роли `owner` |
 | Бэкапы | `GET /admin/backups` (список), `POST /admin/backups` (запустить ручной бэкап), `POST /admin/backups/{id}/restore` — доступно только роли `owner` |
 
@@ -80,4 +86,4 @@
 
 - Валидация запроса — Pydantic-схемы; при ошибке — `422` со стандартной структурой FastAPI (совместимо с обработкой ошибок React Hook Form на фронте).
 - Любая мутация в Admin API логируется (кто, когда, что изменил) — минимум `updated_by`/`updated_at`, в идеале — отдельная таблица аудита, если время разработки позволяет (не блокирующее требование).
-- Rate limiting на публичные POST-эндпоинты (`/cart/items`, `/orders`, `/custom-cakes/consultation`) — через Redis, чтобы форму нельзя было засыпать запросами (раздел 7 договора — «защита форм от спама и автоматических отправок»).
+- Rate limiting на публичные POST-эндпоинты (`/cart/items`, `/orders`, `/custom-cakes/consultation`, `/contacts/feedback`) — через Redis, чтобы форму нельзя было засыпать запросами (раздел 7 договора — «защита форм от спама и автоматических отправок»).
