@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe — Каталог</title>
+<link rel="stylesheet" href="assets/wireframe.css">
+</head>
+<body>
+
+<header class="wf-header">
+  <div class="wf-header-inner">
+    <div class="wf-logo">ЛОГО</div>
+    <nav class="wf-nav">
+      <a href="catalog.html">Каталог</a>
+      <a href="custom-cakes.html">Торты на заказ</a>
+      <a href="about.html">О нас</a>
+      <a href="gallery.html">Примеры работ</a>
+      <a href="contacts.html">Контакты</a>
+    </nav>
+    <div class="wf-header-icons">
+      <div class="wf-icon-btn">☰</div>
+      <div class="wf-icon-btn">🛒<span class="wf-badge">2</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wf-container">
+  <div class="wf-crumbs">Главная <span>›</span> Каталог <span>›</span> Торты</div>
+  <h2 style="font-size:18px;">Каталог</h2>
+
+  <div class="block">
+    <span class="label">Поиск — debounce по названию</span>
+    <input class="wf-input" placeholder="Найти товар...">
+  </div>
+
+  <div class="block" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <span class="label" style="width:100%;">Категории (мобильная кнопка) / Сортировка</span>
+    <span class="wf-btn secondary">☰ Категории</span>
+    <select class="wf-select" style="max-width:220px;">
+      <option>Сортировка: по цене ↑</option>
+      <option>по цене ↓</option>
+      <option>по названию</option>
+      <option>сначала новые</option>
+    </select>
+  </div>
+
+  <div class="sidebar-layout">
+    <aside class="block dark">
+      <span class="label">Категории (десктоп-сайдбар / мобильная шторка)</span>
+      <div>Торты<br><small>— Свадебные<br>— Детские<br>— Корпоративные</small></div>
+      <div style="margin-top:8px;">Десерты</div>
+      <div>Капкейки</div>
+      <div>Сезонное</div>
+    </aside>
+
+    <div>
+      <div class="block">
+        <span class="label">Сетка товаров — GET /catalog/products (пагинация)</span>
+        <div class="wf-grid-2">
+          <div class="wf-card"><div class="ph">фото · метка «хит»</div>Название<br>Цена<br><span class="wf-btn secondary" style="margin-top:4px;">В корзину</span></div>
+          <div class="wf-card"><div class="ph">фото</div>Название<br>Цена</div>
+          <div class="wf-card"><div class="ph">фото · метка «новинка»</div>Название<br>Цена</div>
+          <div class="wf-card"><div class="ph">фото</div>Название<br>Цена</div>
+          <div class="wf-card"><div class="ph">фото</div>Название<br>Цена</div>
+          <div class="wf-card"><div class="ph">фото</div>Название<br>Цена</div>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <span class="wf-btn secondary">Показать ещё</span>
+      </div>
+      <div class="block note" style="text-align:center;">
+        Состояния: пустая категория → заглушка с CTA в общий каталог · поиск без результатов → «ничего не найдено»
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="wf-footer">
+  <div class="wf-footer-grid">
+    <div class="block"><span class="label">Контакты</span>Телефон · часы работы</div>
+    <div class="block"><span class="label">Навигация</span>О нас · Каталог · Политика · Соглашение</div>
+    <div class="block"><span class="label">Соцсети</span>VK · Telegram</div>
+  </div>
+</footer>
+
+<div class="wf-tag">WIREFRAME — Каталог, без дизайна</div>
+<a class="wf-back" href="index.html">← Все страницы</a>
+</body>
+</html>

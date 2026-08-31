@@ -1,0 +1,967 @@
+<div id="fillingModal" class="modal filling-modal">
+    <div class="modal-content filling-modal-content">
+        <div class="modal-header">
+            <div class="header-content">
+                <h3>Выберите начинку</h3>
+                <p>Создайте идеальный торт с любимым вкусом</p>
+            </div>
+            <button class="modal-close" onclick="closeFillingModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="fillings-container">
+            <div class="fillings-grid-modal">
+                {% for filling in fillings %}
+                <div class="filling-card-modal {% if not filling.is_available %}filling-disabled{% endif %}"
+                     data-filling-id="{{ filling.id }}"
+                     data-filling-name="{{ filling.name|escapejs }}"
+                     data-filling-price="{{ filling.price_per_kg }}"
+                     onclick="handleFillingSelection(this)">
+                    <div class="filling-visual">
+                        <div class="filling-image-modal">
+                            <img src="{{ filling.image.url }}" alt="{{ filling.name }}" loading="lazy">
+                            {% if not filling.is_available %}
+                            <div class="filling-overlay-modal">
+                                <span>Недоступно</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="filling-check">
+                            <div class="filling-checkmark">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filling-content-modal">
+                        <h4>{{ filling.name }}</h4>
+                        <p>{{ filling.description }}</p>
+                        <div class="filling-meta">
+                            <span class="filling-price-modal">{{ filling.price_per_kg }}₽/кг</span>
+                            {% if filling.is_available %}
+                            <span class="filling-badge available">Доступно</span>
+                            {% else %}
+                            <span class="filling-badge unavailable">Недоступно</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-fillings-modal">
+                    <div class="empty-state">
+                        <div class="empty-icon">🍰</div>
+                        <h4>Начинки скоро появятся</h4>
+                        <p>Мы работаем над новыми вкусами для вас</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <div class="selected-filling-preview" id="selectedFillingPreview" style="display: none;">
+                <div class="preview-content">
+                    <span class="preview-label">Выбрано:</span>
+                    <span class="preview-name" id="previewFillingName"></span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="cancel-filling-btn" onclick="closeFillingModal()">Отмена</button>
+                <button type="button" class="confirm-filling-btn" id="confirmFillingBtn" onclick="confirmFillingSelection()" disabled>
+                    <span>Выбрать начинку</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Базовые стили модального окна */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    animation: modalFadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.modal-content {
+    background: white;
+    margin: 2% auto;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    position: relative;
+    animation: modalSlideUp 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    max-height: 96vh;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(60px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Заголовок модального окна */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 32px 32px 0;
+    position: relative;
+}
+
+.header-content h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0 0 8px 0;
+    line-height: 1.2;
+}
+
+.header-content p {
+    font-family: 'Montserrat', sans-serif;
+    color: #666;
+    font-size: 1.1rem;
+    margin: 0;
+    opacity: 0.8;
+}
+
+.modal-close {
+    background: #f8f0f0;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #666;
+    flex-shrink: 0;
+    margin-left: 20px;
+}
+
+.modal-close:hover {
+    background: #e08e8f;
+    color: white;
+    transform: rotate(90deg);
+}
+
+/* Контейнер начинок */
+.fillings-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 32px;
+}
+
+.fillings-grid-modal {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    padding: 32px 0;
+}
+
+/* Карточка начинки */
+.filling-card-modal {
+    background: white;
+    border: 2px solid #f8f0f0;
+    border-radius: 20px;
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+    position: relative;
+}
+
+.filling-card-modal:hover {
+    border-color: #e08e8f;
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(224, 142, 143, 0.15);
+}
+
+.filling-card-modal.filling-selected {
+    border-color: #e08e8f;
+    background: linear-gradient(135deg, #fffaf0 0%, #fff5f5 100%);
+}
+
+.filling-card-modal.filling-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.filling-card-modal.filling-disabled:hover {
+    transform: none;
+    border-color: #f8f0f0;
+    box-shadow: none;
+}
+
+/* Визуальная часть карточки */
+.filling-visual {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.filling-image-modal {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.filling-image-modal img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+}
+
+.filling-card-modal:hover .filling-image-modal img {
+    transform: scale(1.05);
+}
+
+.filling-overlay-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.filling-radio {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+}
+
+.filling-radio input[type="radio"] {
+    display: none;
+}
+
+.filling-radio-label {
+    display: block;
+    width: 28px;
+    height: 28px;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.filling-radio input[type="radio"]:checked + .filling-radio-label {
+    background: #e08e8f;
+    border-color: #e08e8f;
+}
+
+.filling-radio input[type="radio"]:checked + .filling-radio-label::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+}
+
+.filling-radio input[type="radio"]:disabled + .filling-radio-label {
+    background: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Контент карточки */
+.filling-content-modal {
+    padding: 24px;
+}
+
+.filling-content-modal h4 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: #333;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.filling-content-modal p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1.5;
+    margin: 0 0 16px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.filling-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filling-price-modal {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+    color: #e08e8f;
+    font-weight: 700;
+}
+
+.filling-badge {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filling-badge.available {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+}
+
+.filling-badge.unavailable {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+}
+
+/* Футер модального окна */
+.modal-footer {
+    padding: 24px 32px;
+    border-top: 1px solid #f0f0f0;
+    background: #fafafa;
+    border-radius: 0 0 24px 24px;
+}
+
+.selected-filling-preview {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 2px solid #e08e8f;
+    margin-bottom: 20px;
+    animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.preview-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.preview-label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: #333;
+}
+
+.preview-name {
+    font-family: 'Montserrat', sans-serif;
+    color: #e08e8f;
+    font-weight: 500;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: flex-end;
+}
+
+.confirm-filling-btn {
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 20px rgba(224, 142, 143, 0.3);
+}
+
+.confirm-filling-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(224, 142, 143, 0.4);
+}
+
+.confirm-filling-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.cancel-filling-btn {
+    background: transparent;
+    border: 2px solid #666;
+    color: #666;
+    padding: 16px 32px;
+    border-radius: 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cancel-filling-btn:hover {
+    background: #666;
+    color: white;
+}
+
+/* Состояние пустого списка */
+.no-fillings-modal {
+    grid-column: 1 / -1;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.7;
+}
+
+.empty-state h4 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.4rem;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    font-family: 'Montserrat', sans-serif;
+    color: #666;
+    margin: 0;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+
+    .modal-header {
+        padding: 24px 24px 0;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .header-content h3 {
+        font-size: 1.8rem;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        margin: 0;
+    }
+
+    .fillings-container {
+        padding: 0 24px;
+    }
+
+    .fillings-grid-modal {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 24px 0;
+    }
+
+    .filling-visual {
+        height: 180px;
+    }
+
+    .filling-content-modal {
+        padding: 20px;
+    }
+
+    .modal-footer {
+        padding: 20px 24px;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .confirm-filling-btn,
+    .cancel-filling-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-header {
+        padding: 20px 20px 0;
+    }
+
+    .header-content h3 {
+        font-size: 1.6rem;
+    }
+
+    .fillings-container {
+        padding: 0 20px;
+    }
+
+    .filling-visual {
+        height: 160px;
+    }
+
+    .filling-content-modal h4 {
+        font-size: 1.2rem;
+    }
+
+    .filling-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
+/* Прокрутка для вебкитов */
+.fillings-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fillings-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.fillings-container::-webkit-scrollbar-thumb {
+    background: #e08e8f;
+    border-radius: 3px;
+}
+
+.fillings-container::-webkit-scrollbar-thumb:hover {
+    background: #d17a7b;
+}
+</style>
+
+
+<script>
+// Переменные для хранения выбранной начинки
+let selectedFillingId = null;
+let selectedFillingName = null;
+let selectedFillingPrice = null;
+
+// Функции для работы с модальным окном начинок
+function openFillingModal() {
+    console.log('Opening filling modal');
+    document.getElementById('fillingModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+
+    // Восстанавливаем выбранную начинку при открытии
+    restoreSelectedFilling();
+}
+
+function closeFillingModal() {
+    console.log('Closing filling modal');
+    document.getElementById('fillingModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+
+    // НИКАКИХ ПЕРЕХОДОВ ИЛИ ПЕРЕЗАГРУЗОК СТРАНИЦЫ!
+    return false;
+}
+
+// Обработчик выбора начинки
+function handleFillingSelection(cardElement) {
+    // Предотвращаем перезагрузку страницы
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    // Проверяем, доступна ли начинка
+    if (cardElement.classList.contains('filling-disabled')) {
+        console.log('Filling is disabled');
+        return false;
+    }
+
+    const fillingId = cardElement.getAttribute('data-filling-id');
+    const fillingName = cardElement.getAttribute('data-filling-name');
+    const fillingPrice = cardElement.getAttribute('data-filling-price');
+
+    console.log('Selected filling:', { fillingId, fillingName, fillingPrice });
+
+    // Снимаем выделение со всех карточек
+    document.querySelectorAll('.filling-card-modal').forEach(card => {
+        card.classList.remove('filling-selected');
+    });
+
+    // Выделяем выбранную карточку
+    cardElement.classList.add('filling-selected');
+
+    // Сохраняем выбранную начинку
+    selectedFillingId = fillingId;
+    selectedFillingName = fillingName;
+    selectedFillingPrice = fillingPrice;
+
+    // Активируем кнопку подтверждения
+    const confirmBtn = document.getElementById('confirmFillingBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        confirmBtn.style.cursor = 'pointer';
+    }
+
+    // Показываем превью выбранной начинки
+    showFillingPreview(selectedFillingName);
+
+    return false;
+}
+
+// Показать превью выбранной начинки
+function showFillingPreview(fillingName) {
+    const preview = document.getElementById('selectedFillingPreview');
+    const previewName = document.getElementById('previewFillingName');
+
+    if (preview && previewName) {
+        previewName.textContent = fillingName;
+        preview.style.display = 'block';
+    }
+}
+
+// Скрыть превью выбранной начинки
+function hideFillingPreview() {
+    const preview = document.getElementById('selectedFillingPreview');
+    if (preview) {
+        preview.style.display = 'none';
+    }
+}
+
+// Восстановление выбранной начинки при открытии модального окна
+function restoreSelectedFilling() {
+    const savedFilling = localStorage.getItem('selectedFilling');
+    console.log('Restoring filling from localStorage:', savedFilling);
+
+    if (savedFilling) {
+        try {
+            const filling = JSON.parse(savedFilling);
+            if (filling.productId === {{ product.id }}) {
+                // Находим карточку с соответствующей начинкой
+                const fillingCard = document.querySelector(`[data-filling-id="${filling.id}"]`);
+                if (fillingCard) {
+                    // Выделяем карточку
+                    fillingCard.classList.add('filling-selected');
+
+                    // Устанавливаем значения
+                    selectedFillingId = filling.id;
+                    selectedFillingName = filling.name;
+                    selectedFillingPrice = filling.price;
+
+                    // Активируем кнопку подтверждения
+                    const confirmBtn = document.getElementById('confirmFillingBtn');
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                    }
+
+                    // Показываем превью
+                    showFillingPreview(selectedFillingName);
+                }
+            } else {
+                // Если начинка для другого товара - сбрасываем
+                resetFillingSelection();
+            }
+        } catch (error) {
+            console.error('Error parsing saved filling:', error);
+            resetFillingSelection();
+        }
+    } else {
+        // Сбрасываем выбор если ничего не выбрано
+        resetFillingSelection();
+    }
+}
+
+// Сброс выбора начинки
+function resetFillingSelection() {
+    document.querySelectorAll('.filling-card-modal').forEach(card => {
+        card.classList.remove('filling-selected');
+    });
+
+    const confirmBtn = document.getElementById('confirmFillingBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.6';
+        confirmBtn.style.cursor = 'not-allowed';
+    }
+
+    hideFillingPreview();
+    selectedFillingId = null;
+    selectedFillingName = null;
+    selectedFillingPrice = null;
+}
+
+// Подтверждение выбора начинки
+function confirmFillingSelection() {
+    console.log('Confirming filling selection:', selectedFillingId);
+
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    if (selectedFillingId) {
+        // Обновляем интерфейс на странице товара
+        updateProductPageWithFilling();
+
+        // Сохраняем в localStorage
+        localStorage.setItem('selectedFilling', JSON.stringify({
+            id: selectedFillingId,
+            name: selectedFillingName,
+            price: selectedFillingPrice,
+            productId: {{ product.id }}
+        }));
+
+        // Закрываем модальное окно
+        closeFillingModal();
+
+        // Показываем уведомление
+        showNotification(`Начинка "${selectedFillingName}" выбрана`, 'success');
+    } else {
+        showNotification('Пожалуйста, выберите начинку', 'error');
+    }
+
+    return false;
+}
+
+// Обновление страницы товара с выбранной начинкой
+function updateProductPageWithFilling() {
+    const selectedFillingElement = document.getElementById('selectedFilling');
+    const fillingSelectBtn = document.querySelector('.filling-select-btn');
+
+    if (selectedFillingElement && fillingSelectBtn) {
+        selectedFillingElement.style.display = 'flex';
+        fillingSelectBtn.style.display = 'none';
+    }
+
+    const selectedFillingNameElement = document.querySelector('.selected-filling-name');
+    if (selectedFillingNameElement) {
+        selectedFillingNameElement.textContent = selectedFillingName;
+    }
+}
+
+// Функция для сброса выбора начинки
+function clearFillingSelection() {
+    // Удаляем из localStorage
+    localStorage.removeItem('selectedFilling');
+
+    // Сбрасываем переменные
+    selectedFillingId = null;
+    selectedFillingName = null;
+    selectedFillingPrice = null;
+
+    // Обновляем интерфейс
+    const selectedFillingElement = document.getElementById('selectedFilling');
+    const fillingSelectBtn = document.querySelector('.filling-select-btn');
+
+    if (selectedFillingElement && fillingSelectBtn) {
+        selectedFillingElement.style.display = 'none';
+        fillingSelectBtn.style.display = 'flex';
+    }
+
+    // Сбрасываем выбор в модальном окне
+    resetFillingSelection();
+
+    showNotification('Начинка убрана', 'success');
+}
+
+// Функция для показа уведомлений
+function showNotification(message, type = 'success') {
+    // Создаем элемент уведомления
+    const notification = document.createElement('div');
+    notification.className = `cart-notification ${type}`;
+    notification.innerHTML = `<span>${message}</span>`;
+
+    // Стили для уведомления
+    notification.style.cssText = `
+        position: fixed;
+        top: 120px;
+        right: 30px;
+        background: ${type === 'success' ? '#2ecc71' : '#e74c3c'};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        z-index: 1001;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 500;
+        animation: slideInRight 0.3s ease;
+    `;
+
+    document.body.appendChild(notification);
+
+    // Удаляем уведомление через 3 секунды
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing filling modal');
+
+    // Восстановление выбранной начинки в интерфейсе товара
+    const savedFilling = localStorage.getItem('selectedFilling');
+    if (savedFilling) {
+        try {
+            const filling = JSON.parse(savedFilling);
+            if (filling.productId === {{ product.id }}) {
+                updateProductPageWithFilling();
+            } else {
+                // Если начинка для другого товара - очищаем
+                clearFillingSelection();
+            }
+        } catch (error) {
+            console.error('Error parsing saved filling on page load:', error);
+            clearFillingSelection();
+        }
+    }
+
+    // Закрытие модального окна при клике вне его
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('fillingModal');
+        if (event.target === modal) {
+            closeFillingModal();
+        }
+    });
+
+    // Закрытие модального окна при нажатии ESC
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && document.getElementById('fillingModal').style.display === 'block') {
+            closeFillingModal();
+        }
+    });
+
+    // Инициализация кнопки подтверждения
+    const confirmBtn = document.getElementById('confirmFillingBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.6';
+        confirmBtn.style.cursor = 'not-allowed';
+    }
+
+    // Добавляем обработчики для предотвращения перезагрузки для всех кнопок в модалке
+    document.querySelectorAll('.filling-card-modal').forEach(card => {
+        card.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
+    });
+
+    // Предотвращаем поведение по умолчанию для всех кнопок в модальном окне
+    document.querySelectorAll('.modal-close, .cancel-filling-btn, .confirm-filling-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
+    });
+
+    // Особенно важно для кнопки закрытия
+    document.querySelector('.modal-close').addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeFillingModal();
+        return false;
+    });
+
+    // И для кнопки отмены
+    document.querySelector('.cancel-filling-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeFillingModal();
+        return false;
+    });
+});
+
+// Глобальные обработчики для предотвращения любых переходов
+window.addEventListener('beforeunload', function(e) {
+    // Эта функция может вызываться при закрытии страницы, но не должна блокировать нормальную работу
+});
+
+// Отключаем любые переходы по ссылкам внутри модального окна
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#fillingModal')) {
+        // Если клик внутри модального окна - предотвращаем любые переходы
+        if (e.target.tagName === 'A' || e.target.closest('a')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    }
+});
+</script>

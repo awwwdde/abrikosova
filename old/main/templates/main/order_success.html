@@ -1,0 +1,187 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="order-success-section">
+    <div class="container">
+        <div class="success-content">
+            <div class="success-icon">✅</div>
+            <h1>Заказ оформлен успешно!</h1>
+            <p class="order-number">Номер вашего заказа: <strong>#{{ order.order_number }}</strong></p>
+            
+            <div class="order-details">
+                <div class="detail-item">
+                    <span class="label">Имя:</span>
+                    <span class="value">{{ order.customer_name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Телефон:</span>
+                    <span class="value">{{ order.customer_phone }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Способ получения:</span>
+                    <span class="value">{{ order.get_delivery_method_display }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Общая сумма:</span>
+                    <span class="value">{{ order.total_price }}₽</span>
+                </div>
+                {% if order.customer_comment %}
+                <div class="detail-item">
+                    <span class="label">Комментарий:</span>
+                    <span class="value">{{ order.customer_comment }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="success-message">
+                <p>Мы свяжемся с вами в ближайшее время для подтверждения заказа.</p>
+                <p>Время приготовления: 2-4 часа</p>
+            </div>
+
+            <div class="success-actions">
+                <a href="{% url 'catalog' %}" class="cta-button">
+                    Продолжить покупки
+                </a>
+                <a href="{% url 'home' %}" class="cta-button secondary">
+                    На главную
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.order-success-section {
+    padding: 80px 0;
+    background: #fffaf0;
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+}
+
+.success-content {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    padding: 50px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.success-icon {
+    font-size: 4rem;
+    margin-bottom: 30px;
+}
+
+.success-content h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: #2ecc71;
+    margin-bottom: 20px;
+}
+
+.order-number {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.order-details {
+    text-align: left;
+    background: #f8f0f0;
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e8d8d8;
+}
+
+.detail-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.detail-item .label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: #333;
+}
+
+.detail-item .value {
+    font-family: 'Montserrat', sans-serif;
+    color: #666;
+}
+
+.success-message {
+    margin-bottom: 30px;
+}
+
+.success-message p {
+    font-family: 'Montserrat', sans-serif;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.success-actions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.cta-button {
+    display: inline-block;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.cta-button.secondary {
+    background: transparent;
+    border: 2px solid #e08e8f;
+    color: #e08e8f;
+}
+
+.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(224, 142, 143, 0.3);
+}
+
+@media (max-width: 768px) {
+    .success-content {
+        padding: 30px 20px;
+        margin: 20px;
+    }
+    
+    .success-content h1 {
+        font-size: 2rem;
+    }
+    
+    .success-actions {
+        flex-direction: column;
+    }
+    
+    .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
+</style>
+{% endblock %}

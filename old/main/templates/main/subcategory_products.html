@@ -1,0 +1,99 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="subcategory-hero" style="background: linear-gradient(135deg, #f9f0f0 0%, #f8e8e8 100%); padding: 100px 0 40px;">
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px; text-align: center;">
+        <h1 style="font-family: 'Playfair Display', serif; color: #e08e8f; font-size: 2.5rem; margin-bottom: 10px;">
+            {{ subcategory.name }}
+        </h1>
+        <a href="{% url 'catalog' %}" style="color: #e08e8f; text-decoration: none; font-family: 'Montserrat', sans-serif;">
+            ← Вернуться в каталог
+        </a>
+    </div>
+</section>
+
+<section class="products-section" style="padding: 60px 0; background-color: #fffafb;">
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+        {% if products %}
+        <div class="products-grid">
+            {% for product in products %}
+            <div class="product-card" style="background: white; border-radius: 20px; overflow: hidden;
+                  box-shadow: 0 10px 30px rgba(224, 142, 143, 0.1); transition: all 0.3s ease;">
+                <div class="product-image" style="height: 250px; overflow: hidden; position: relative;">
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                         style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
+                    <div class="product-badge" style="position: absolute; top: 15px; right: 15px;
+                          background: #e08e8f; color: white; padding: 5px 12px; border-radius: 15px;
+                          font-family: 'Montserrat', sans-serif; font-size: 0.8rem;">
+                        {{ product.weight }}
+                    </div>
+                </div>
+                <div class="product-content" style="padding: 25px;">
+                    <h3 style="font-family: 'Playfair Display', serif; color: #333; font-size: 1.3rem;
+                         margin-bottom: 10px;">
+                        {{ product.name }}
+                    </h3>
+                    <p style="font-family: 'Montserrat', sans-serif; color: #666; font-size: 0.9rem;
+                         margin-bottom: 15px; line-height: 1.5;">
+                        {{ product.description }}
+                    </p>
+                    <div class="product-footer" style="display: flex; justify-content: space-between;
+                         align-items: center;">
+                        <span class="price" style="font-family: 'Playfair Display', serif; color: #e08e8f;
+                              font-size: 1.5rem; font-weight: bold;">
+                            {{ product.price }} ₽
+                        </span>
+                        <button class="add-to-cart" style="background: #e08e8f; color: white; border: none;
+                               padding: 10px 20px; border-radius: 25px; font-family: 'Montserrat', sans-serif;
+                               cursor: pointer; transition: all 0.3s ease;">
+                            Заказать
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 0;">
+            <p style="font-family: 'Montserrat', sans-serif; color: #666; font-size: 1.1rem;">
+                В этой категории пока нет товаров
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+<style>
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(224, 142, 143, 0.2);
+}
+
+.product-card:hover .product-image img {
+    transform: scale(1.1);
+}
+
+.add-to-cart:hover {
+    background: #d17a7b !important;
+    transform: scale(1.05);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .product-card {
+        margin: 0 10px;
+    }
+}
+</style>

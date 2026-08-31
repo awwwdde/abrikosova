@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Кондитерская Елены Абрикосовой - Торты и десерты на заказ</title>
+    <meta name="description" content="Кондитерская Елены Абрикосовой в Москве. Торты на заказ, авторские десерты, пирожные, капкейки, макаруны. Натуральные ингредиенты, быстрая доставка.">
+    <meta name="keywords" content="торты на заказ Москва, свадебные торты, детские торты, десерты, капкейки, макаруны, пирожные, корпоративные подарки">
+    <meta name="author" content="Кондитерская Елены Абрикосовой">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Bakery",
+      "name": "Кондитерская Елены Абрикосовой",
+      "description": "Авторские торты и десерты ручной работы в Москве",
+      "url": "https://abrikosova-elena.ru/",
+      "telephone": "+7-962-352-22-77",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Москва",
+        "addressCountry": "RU"
+      },
+      "servesCuisine": "Кондитерские изделия",
+      "priceRange": "₽₽"
+    }
+    </script>
+    {% load static %}
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/favicon-16x16.png' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="msapplication-TileColor" content="#e08e8f">
+    <meta name="msapplication-config" content="{% static 'browserconfig.xml' %}">
+    <meta name="theme-color" content="#e08e8f">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+            background: linear-gradient(135deg, #fffaf0 0%, #fff5f5 100%);
+        }
+
+        .grid-single { grid-template-columns: 1fr !important; height: 70vh !important; }
+        .grid-double { grid-template-columns: 1fr 1fr !important; }
+        .not-height { min-height: 0 !important; }
+        .w-h { height: 100% !important; }
+
+        /* Шапка */
+        .header {
+            position:  sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #e08e8f;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            height: 80px;
+        }
+        .mobile-buttons-container{
+            display: none;
+            justify-content: space-between;
+            gap: 4px;
+            align-items: center;
+        }
+        /* Логотип - общие стили */
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        
+        .logo-img {
+            height: 100px;
+            width: auto;
+            transition: transform 0.3s ease;
+            object-fit: contain;
+        }
+
+        .logo-img:hover {
+            transform: scale(1.2);
+        }
+
+        .nav-menu {
+            display: flex;
+        }
+
+        .nav-list {
+            display: flex;
+            align-items: center;
+            list-style: none;
+            gap: 30px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            opacity: 0.8;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: white;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        /* Кнопка заказа */
+        .nav-link.order-button {
+            background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 700;
+            box-shadow: 0 6px 20px rgba(224, 142, 143, 0.4);
+            animation: pulse-glow 2s infinite;
+        }
+
+        .nav-link.order-button::after {
+            display: none;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 6px 20px rgba(224, 142, 143, 0.4); }
+            50% { box-shadow: 0 6px 25px rgba(224, 142, 143, 0.7); }
+        }
+
+        /* Бургер кнопка - 60x60 как корзина */
+        .mobile-menu-toggle {
+            display: none;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+            border-radius: 50%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(224, 142, 143, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1002;
+            position: relative;
+        }
+
+        .mobile-menu-toggle span {
+            display: block;
+            width: 24px;
+            height: 3px;
+            background-color: white;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        .mobile-menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+        .mobile-menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        /* МОДАЛЬНОЕ ОКНО — без заголовка, крестик с отступом, уникальный класс */
+        .mobile-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0);
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0.3s ease, opacity 0.3s ease;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        
+        .mobile-modal.active {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+        .footer{
+            margin-top: 0 !important;
+        }
+        .modal-drawer {
+            background: #ffffff;
+            width: 85%;
+            max-width: 380px;
+            border-radius: 32px;
+            box-shadow: 0 30px 50px rgba(0, 0, 0, 0.2);
+            transform: translateY(30px) scale(0.96);
+            transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1), opacity 0.3s;
+            opacity: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .footer-links{
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+        }
+        .footer-links a {
+    color: white;
+    text-decoration: none;
+}
+        .mobile-modal.active .modal-drawer {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+        /* Верхняя полоса без текста, только крестик с отступами */
+        .modal-header-clean {
+            background: #e08e8f;
+            padding: 24px 24px 16px 24px;
+            position: relative;
+            min-height: 72px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        /* УНИКАЛЬНЫЙ КЛАСС ДЛЯ КРЕСТИКА — белый, поменьше, не упирается */
+        .modal-close-white {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent !important;
+            border: none !important;
+            cursor: pointer;
+            font-size: 34px;
+            font-weight: 300;
+            line-height: 1;
+            color: #ffffff !important;
+            padding: 4px 8px;
+            margin: 0;
+            border-radius: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            letter-spacing: normal;
+            text-shadow: none;
+            box-shadow: none !important;
+            opacity: 0.9;
+        }
+        
+        .modal-close-white:hover {
+            opacity: 1;
+            transform: scale(1.08);
+            background: transparent !important;
+            color: #ffffff !important;
+        }
+        
+        /* КНОПКИ МЕНЮ — единый стиль, без иконок */
+        .modal-nav-list {
+            list-style: none;
+            padding: 20px 24px 36px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .modal-nav-link {
+            display: block;
+            text-decoration: none;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 600;
+            color: #e08e8f;
+            background: #ffffff;
+            padding: 14px 20px;
+            border-radius: 60px;
+            border: 1.5px solid #e08e8f;
+            transition: all 0.25s ease;
+            text-align: center;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .modal-nav-link:hover {
+            background: #e08e8f;
+            color: white;
+            border-color: #e08e8f;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(224, 142, 143, 0.25);
+        }
+        
+        /* ОСОБАЯ КНОПКА «ЗАКАЗАТЬ ДЕСЕРТ» — градиент */
+        .modal-order-special {
+            background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%) !important;
+            color: white !important;
+            border: none !important;
+            box-shadow: 0 8px 18px rgba(224, 142, 143, 0.4);
+            font-weight: 700;
+        }
+        
+        .modal-order-special:hover {
+            background: linear-gradient(135deg, #d47c7d 0%, #b85e5f 100%) !important;
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 14px 24px rgba(224, 142, 143, 0.5);
+            color: white !important;
+        }
+
+        /* КОРЗИНА - общие стили */
+        .cart-icon-wrapper .cart-icon {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(224, 142, 143, 0.4);
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .cart-icon-wrapper .cart-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 30px rgba(224, 142, 143, 0.6);
+        }
+
+        .cart-icon-wrapper .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4757;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: 'Montserrat', sans-serif;
+            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+        }
+
+        /* ========== ВЕБ ВЕРСИЯ (ширина >= 769px) ========== */
+        @media (min-width: 769px) {
+            .mobile-menu-toggle {
+                display: none !important;
+            }
+            .mobile-modal {
+                display: none !important;
+            }
+            
+            /* На веб-версии корзина в хедере СКРЫТА */
+            .header .cart-icon-wrapper {
+                display: none !important;
+            }
+            
+            /* Отдельная фиксированная корзина - position fixed, справа */
+            .desktop-fixed-cart {
+                display: none ;
+                position: fixed !important;
+                top: 90px !important;
+                right: 15px !important;
+                z-index: 1001;
+            }
+            
+            /* Мобильный лого скрыт */
+            .mobile-logo-wrapper {
+                display: none !important;
+            }
+        }
+
+       
+        @media (max-width: 768px) {
+            
+            .header {
+                position: fixed !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+            }
+            .header-container {
+                padding: 12px 15px;
+            }
+            
+            /* Веб-лого скрываем, показываем мобильный с кружочком */
+            .desktop-logo {
+                display: none !important;
+            }
+            
+            .mobile-logo-wrapper {
+                display: block !important;
+            }
+            .mobile-buttons-container{
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            /* Мобильный логотип в кружочке 60x60 */
+            .mobile-logo-link {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+                border-radius: 50%;
+                box-shadow: 0 8px 25px rgba(224, 142, 143, 0.4);
+                transition: all 0.3s ease;
+                text-decoration: none;
+            }
+            
+            .mobile-logo-link:hover {
+                transform: scale(1.1);
+                box-shadow: 0 12px 30px rgba(224, 142, 143, 0.6);
+            }
+            
+            .mobile-logo-img {
+                width: 40px;
+                height: 40px;
+                object-fit: contain;
+                filter: brightness(0) invert(1);
+            }
+            
+            /* Бургер 60x60 */
+            .mobile-menu-toggle {
+                display: flex !important;
+            }
+            
+            .nav-menu {
+                display: none;
+            }
+            
+            /* Отдельная фиксированная корзина на мобилке - position fixed, справа, под бургером */
+            .desktop-fixed-cart {
+                display: none ;
+                position: fixed !important;
+                top: 90px !important;
+                right: 15px !important;
+                z-index: 1001;
+            }
+            
+            .footer-top {
+                flex-direction: column;
+                gap: 30px;
+                text-align: center;
+            }
+            .footer-contact, .footer-nav, .footer-social {
+                text-align: center;
+                width: 100%;
+            }
+            .footer-links {
+                flex-direction: column;
+                justify-content: center;
+                gap: 4px;
+            }
+            .social-links {
+                justify-content: center;
+            }
+            main {
+                margin-top: 0 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-container { padding: 12px 15px; }
+            .mobile-logo-img { width: 40px !important; height: 40px !important; }
+            .mobile-logo-link { width: 60px !important; height: 60px !important; }
+            .mobile-menu-toggle { width: 60px !important; height: 60px !important; }
+            .cart-icon-wrapper .cart-icon { width: 60px !important; height: 60px !important; }
+            .cart-icon-wrapper .cart-count { width: 24px !important; height: 24px !important; font-size: 0.8rem !important; }
+            .mobile-modal .modal-nav-link {
+                font-size: 1.45rem !important;
+                padding: 12px 16px !important;
+            }
+            .modal-drawer {
+                width: 90%;
+            }
+            .modal-close-white {
+                font-size: 32px !important;
+                padding: 2px 6px !important;
+            }
+            .modal-header-clean {
+                padding: 20px 20px 12px 20px !important;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .header-container { padding: 12px 10px; }
+            .mobile-logo-img { width: 40px !important; height: 40px !important; }
+            .mobile-logo-link { width: 60px !important; height: 60px !important; }
+            .mobile-menu-toggle { width: 60px !important; height: 60px !important; }
+            .cart-icon-wrapper .cart-icon { width: 60px !important; height: 60px !important; }
+            .modal-close-white {
+                font-size: 30px !important;
+            }
+        }
+    </style>
+
+    <!-- Флоатинг чат -->
+    <style>
+    .floating-chat-widget {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1000;
+        font-family: 'Montserrat', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .chat-toggle {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 8px 25px rgba(224, 142, 143, 0.4);
+        transition: all 0.3s ease;
+        color: white;
+        order: 2;
+        margin-top: 15px;
+    }
+
+    .chat-toggle:hover {
+        transform: scale(1.1);
+        box-shadow: 0 12px 35px rgba(224, 142, 143, 0.6);
+    }
+
+    .social-buttons {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 12px;
+        align-items: flex-end;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+        order: 1;
+    }
+
+    .floating-chat-widget.active .social-buttons {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .social-button {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f6dedf;
+        border-radius: 50%;
+        border: 2px solid rgba(224, 142, 143, 0.3);
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 15px rgba(224, 142, 143, 0.2);
+        color: #e08e8f;
+        text-decoration: none;
+        position: relative;
+        transform: translateY(10px);
+        opacity: 0;
+    }
+
+    .floating-chat-widget.active .social-button {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .social-button:hover {
+        transform: translateY(-3px) scale(1.1);
+        box-shadow: 0 8px 20px rgba(224, 142, 143, 0.4);
+        border-color: rgba(224, 142, 143, 0.6);
+    }
+
+    .social-button.telegram:hover { background: #0088cc; color: white; }
+    .social-button.vk:hover { background: #4C75A3; color: white; }
+
+    .social-button::after {
+        content: attr(aria-label);
+        position: absolute;
+        right: 60px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        pointer-events: none;
+    }
+
+    .social-button:hover::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(-50%) translateX(-5px);
+    }
+
+    @media (max-width: 768px) {
+        .floating-chat-widget { bottom: 20px; right: 20px; }
+        .chat-toggle { width: 55px; height: 55px; margin-top: 12px; }
+        .social-button { width: 45px; height: 45px; }
+    }
+    </style>
+</head>
+<body>
+    <!-- Шапка -->
+    <header class="header">
+        <div class="header-container">
+            <!-- Десктоп лого (без кружочка) -->
+            <div class="logo desktop-logo">
+                <a href="/" class="logo-link">
+                    <img src="{% static 'img/logo_1.png' %}" alt="Сладкая Радость" class="logo-img">
+                </a>
+            </div>
+            
+            <!-- Мобильный лого (с кружочком 60x60) -->
+            <div class="logo mobile-logo-wrapper" style="display: none;">
+                <a href="/" class="mobile-logo-link">
+                    <img src="{% static 'img/logo_1.png' %}" alt="Сладкая Радость" class="mobile-logo-img">
+                </a>
+            </div>
+
+            <!-- Десктоп навигация -->
+            <nav class="nav-menu">
+                <ul class="nav-list">
+                    <li><a href="{% url 'catalog' %}" class="nav-link">Каталог</a></li>
+                    <li><a href="{% url 'custom_cakes' %}" class="nav-link">Торты на заказ</a></li>
+                    <li><a href="{% url 'about' %}" class="nav-link">О нас</a></li>
+                    <li><a href="{% url 'contacts' %}" class="nav-link">Контакты</a></li>
+                    <li><a href="https://t.me/konditerskaya_EA_bot" target="_blank" class="nav-link order-button">🍰 Заказать десерт</a></li>
+                </ul>
+            </nav>
+            <div class="mobile-buttons-container">
+                <div class="cart-icon-wrapper desktop-fixed-cart" style="position: relative!important; top: 0 !important; right: 0 !important;">
+                    <div class="cart-icon" onclick="goToCart()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
+                        <span class="cart-count" id="desktopCartCount">0</span>
+                    </div>
+                </div>
+                <button class="mobile-menu-toggle" aria-label="Открыть меню">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- МОДАЛЬНОЕ БУРГЕР МЕНЮ (без заголовка, уникальный класс крестика, отступы сверху) -->
+    <div class="mobile-modal" id="mobileModal">
+        <div class="modal-drawer">
+            <div class="modal-header-clean">
+                <button class="modal-close-white" id="closeModalBtn" aria-label="Закрыть">✕</button>
+            </div>
+            <ul class="modal-nav-list">
+                <li><a href="{% url 'catalog' %}" class="modal-nav-link">Каталог</a></li>
+                <li><a href="{% url 'custom_cakes' %}" class="modal-nav-link">Торты на заказ</a></li>
+                <li><a href="{% url 'about' %}" class="modal-nav-link">О нас</a></li>
+                <li><a href="{% url 'contacts' %}" class="modal-nav-link">Контакты</a></li>
+                <li><a href="https://t.me/konditerskaya_EA_bot" target="_blank" class="modal-nav-link modal-order-special">Заказать десерт</a></li>
+            </ul>
+        </div>
+    </div>
+    {% include 'main/includes/cart_icon.html' %}
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Подвал -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-top">
+                <div class="footer-contact">
+                    <div style="color: white; font-size: 14px; margin-bottom: 8px;">Телефон для заказов:</div>
+                    <a href="tel:+7 (962)-352-22-77" style="color: white; font-size: 20px; font-weight: 600; text-decoration: none;">+7 (962)-352-22-77</a>
+                    <div style="color: white; font-size: 12px; margin-top: 5px;">Ежедневно с 9:00 до 21:00</div>
+                </div>
+                <div class="footer-nav">
+                    <nav class="footer-links">
+                        <a href="{% url 'about' %}">О нас</a>
+                        <a href="{% url 'catalog' %}">Каталог</a>
+                        <a href="/privacy/">Политика конфиденциальности</a>
+                    </nav>
+                </div>
+                <div class="footer-social">
+                    <div style="color: white; margin-bottom: 15px;">Мы в соцсетях:</div>
+                    <div class="social-links" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                        <a href="https://vk.com/your_page" target="_blank" class="social-icon" style="background-color: #f6dedf; display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px;  border-radius: 50%; transition: all 0.3s ease; text-decoration: none;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="#e08e8f"><path d="M15.073 2H8.937C3.332 2 2 3.333 2 8.926v6.136C2 20.667 3.323 22 8.937 22h6.136C20.667 22 22 20.677 22 15.064V8.926C22 3.332 20.677 2 15.073 2zm3.073 14.27h-1.459c-.552 0-.72-.447-1.708-1.437-.864-.866-1.229-.937-1.448-.937-.302 0-.385.083-.385.5v1.312c0 .354-.115.562-1.042.562-1.52 0-3.07-.834-4.209-2.385-1.812-2.354-2.375-4.208-2.375-4.208 0-.218.083-.417.5-.417h1.459c.375 0 .51.167.656.552.708 2.084 1.876 3.896 2.156 3.896.187 0 .27-.083.27-.552v-2.146c-.062-.979-.582-1.062-.582-1.416a.36.36 0 01.374-.334h2.292c.312 0 .417.147.417.49v3.021c0 .312.135.417.229.417.187 0 .334-.104.677-.447 1.125-1.26 1.76-2.854 1.76-2.854.125-.271.291-.375.552-.375h1.459c.437 0 .53.209.437.531-.229.948-2.438 4.01-2.438 4.01-.187.27-.27.416 0 .75.187.188.834.708 1.27 1.146.854.854 1.76 1.562 1.96 1.77.437.438.26.708-.25.708z"/></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p style="color: white;">&copy; 2026 Сладкая Радость. Все права защищены.</p>
+                <p style="color: white; font-size: 12px; margin-top: 10px;">Сайт носит информационный характер и ни при каких условиях не является публичной офертой, определяемой положениями ст. 437 ГК РФ.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Флоатинг чат -->
+    <div class="floating-chat-widget">
+        <div class="social-buttons">
+            <a href="https://vk.com/your_page" target="_blank" class="social-button vk" aria-label="VKontakte">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.073 2H8.937C3.332 2 2 3.333 2 8.926v6.136C2 20.667 3.323 22 8.937 22h6.136C20.667 22 22 20.677 22 15.064V8.926C22 3.332 20.677 2 15.073 2zm3.073 14.27h-1.459c-.552 0-.72-.447-1.708-1.437-.864-.866-1.229-.937-1.448-.937-.302 0-.385.083-.385.5v1.312c0 .354-.115.562-1.042.562-1.52 0-3.07-.834-4.209-2.385-1.812-2.354-2.375-4.208-2.375-4.208 0-.218.083-.417.5-.417h1.459c.375 0 .51.167.656.552.708 2.084 1.876 3.896 2.156 3.896.187 0 .27-.083.27-.552v-2.146c-.062-.979-.582-1.062-.582-1.416a.36.36 0 01.374-.334h2.292c.312 0 .417.147.417.49v3.021c0 .312.135.417.229.417.187 0 .334-.104.677-.447 1.125-1.26 1.76-2.854 1.76-2.854.125-.271.291-.375.552-.375h1.459c.437 0 .53.209.437.531-.229.948-2.438 4.01-2.438 4.01-.187.27-.27.416 0 .75.187.188.834.708 1.27 1.146.854.854 1.76 1.562 1.96 1.77.437.438.26.708-.25.708z"/></svg>
+            </a>
+            <!-- <a href="https://t.me/abricosova_elena" target="_blank" class="social-button telegram" aria-label="Telegram">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.372 0 12c0 6.627 5.374 12 12 12 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
+            </a> -->
+        </div>
+        <div class="chat-toggle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        </div>
+    </div>
+
+    <script src="{% static 'js/main.js' %}"></script>
+    <script>
+    function goToCart() {
+        window.location.href = '{% url "cart_view" %}';
+    }
+
+    function updateCartCounter() {
+        const cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+        const totalItems = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
+        
+        document.querySelectorAll('.cart-count').forEach(el => {
+            el.textContent = totalItems;
+        });
+        
+        document.querySelectorAll('.cart-icon-wrapper').forEach(wrapper => {
+            wrapper.style.display = totalItems > 0 ? 'flex' : 'none';
+        });
+        
+        fetch('/cart/count/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.count !== undefined) {
+                    document.querySelectorAll('.cart-count').forEach(el => {
+                        el.textContent = data.count;
+                    });
+                    document.querySelectorAll('.cart-icon-wrapper').forEach(wrapper => {
+                        wrapper.style.display = data.count > 0 ? 'flex' : 'none';
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function syncCartWithServer() {
+        fetch('/cart/items/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.items) {
+                    const serverCartItems = data.items.map(item => ({
+                        id: item.product_id,
+                        quantity: item.quantity,
+                        addedAt: new Date().toISOString()
+                    }));
+                    localStorage.setItem('cartItems', JSON.stringify(serverCartItems));
+                    updateCartCounter();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCartCounter();
+        syncCartWithServer();
+        
+        document.querySelectorAll('.cart-icon').forEach(icon => {
+            icon.style.cursor = 'pointer';
+            icon.addEventListener('click', goToCart);
+        });
+        
+        // Модальное окно для бургера (уникальный крестик)
+        const mobileModal = document.getElementById('mobileModal');
+        const menuToggle = document.querySelector('.mobile-menu-toggle');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const bodyEl = document.body;
+        
+        function openModal() {
+            if (mobileModal) {
+                mobileModal.classList.add('active');
+                bodyEl.style.overflow = 'hidden';
+                if (menuToggle) menuToggle.classList.add('active');
+            }
+        }
+        
+        function closeModal() {
+            if (mobileModal) {
+                mobileModal.classList.remove('active');
+                bodyEl.style.overflow = '';
+                if (menuToggle) menuToggle.classList.remove('active');
+            }
+        }
+        
+        if (menuToggle) {
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (mobileModal && mobileModal.classList.contains('active')) {
+                    closeModal();
+                } else {
+                    openModal();
+                }
+            });
+        }
+        
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', closeModal);
+        }
+        
+        if (mobileModal) {
+            mobileModal.addEventListener('click', (e) => {
+                if (e.target === mobileModal) {
+                    closeModal();
+                }
+            });
+        }
+        
+        document.querySelectorAll('.modal-nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                closeModal();
+            });
+        });
+        
+        // Флоатинг чат
+        const chatWidget = document.querySelector('.floating-chat-widget');
+        const chatToggle = document.querySelector('.chat-toggle');
+        if (chatToggle) {
+            chatToggle.addEventListener('click', function() {
+                chatWidget.classList.toggle('active');
+            });
+        }
+        
+        document.addEventListener('click', function(e) {
+            if (chatWidget && !chatWidget.contains(e.target) && chatWidget.classList.contains('active')) {
+                chatWidget.classList.remove('active');
+            }
+        });
+        
+        document.querySelectorAll('.social-button').forEach(btn => {
+            btn.addEventListener('click', e => e.stopPropagation());
+        });
+    });
+    
+    window.updateCartCounter = updateCartCounter;
+    window.syncCartWithServer = syncCartWithServer;
+    window.goToCart = goToCart;
+    </script>
+</body>
+</html>

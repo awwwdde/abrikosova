@@ -1,0 +1,620 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block content %}
+{% with content=page_content %}
+<!-- Hero секция -->
+<section class="about-hero">
+    <div class="container">
+        <h1>{{ content.title|default:"О нас" }}</h1>
+    </div>
+</section>
+
+<!-- Основной контент -->
+<section class="about-content">
+    <div class="container">
+        <div class="about-grid">
+            <div class="about-text">
+                <div class="text-content">
+                    <p class="lead">
+                        Добро пожаловать в кондитерскую Елены Абрикосовой! Мы — не просто кондитерская, мы — продолжатели традиций русского кондитерского дела, заложенных знаменитой династией Абрикосовых.
+                    </p>
+                    <p>
+                        С 1849 года страсть к созданию изысканных десертов остается неизменной, как и стремление радовать вас неповторимым вкусом и качеством.
+                    </p>
+                    
+                    <h2>{{ content.values_title|default:"Наши ценности" }}</h2>
+                    
+                    <div class="values-list">
+                        <div class="value-item">
+                            <div class="value-icon-container">
+                            <div class="value-icon">🥇</div>
+                            </div>
+                            <div class="value-content">
+                                <h3>Качество и натуральность</h3>
+                                <p>При создании наших десертов мы стремимся использовать только качественное сырье, акцентируем внимание на сбалансированном составе, поэтому в наших десертах нет лишнего.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="value-item">
+                            <div class="value-icon-container">
+                            <div class="value-icon">👩‍🍳</div>
+                        </div>
+                            <div class="value-content">
+                                <h3>Ручная работа</h3>
+                                <p>Каждый торт, пирожное или конфета готовится профессиональным кондитером вручную, с заботой и вниманием к деталям.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="value-item">
+                             <div class="value-icon-container">
+                            <div class="value-icon">📜</div>
+                        </div>
+                            <div class="value-content">
+                                <h3>Традиции и инновации</h3>
+                                <p>Мы бережно храним классические рецепты, но не боимся добавлять современные акценты, постоянно обучаясь у лучших кондитеров с мировым признанием.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="value-item">
+                             <div class="value-icon-container">
+                            <div class="value-icon">❤️</div>
+                        </div>
+                            <div class="value-content">
+                                <h3>Любовь к клиентам</h3>
+                                <p>Наша главная цель — видеть ваши улыбки и делать моменты вашей жизни слаще и ярче.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="about-cta">
+                        <p>Если вам близки наши ценности, приглашаем вас в гости в нашу кондитерскую или оформите заказ на сайте, и мы сделаем ваш день чуточку слаще!</p>
+                        <div class="cta-buttons">
+                            <a href="{% url 'catalog' %}" class="cta-button">Смотреть каталог</a>
+                            <a href="{% url 'contacts' %}" class="cta-button secondary">Наши контакты</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="about-image">
+                {% if content.image %}
+                    <img src="{{ content.image.url }}" alt="Кондитерская Елены Абрикосовой">
+                {% else %}
+                    <img src="{% static 'img/about-main1.png' %}" alt="Кондитерская Елены Абрикосовой">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Блок с историей -->
+<section class="history-section">
+    <div class="container">
+        <div class="history-content">
+            <div class="history-badge">
+                <span>С 1849 года</span>
+            </div>
+            <h2>Династия Абрикосовых</h2>
+            <p>Продолжаем дело знаменитой династии кондитеров, основанной Алексеем Ивановичем Абрикосовым, чьи сладости покорили всю Российскую империю и продолжают радовать ценителей настоящего качества.</p>
+        </div>
+    </div>
+</section>
+
+<style>
+    footer{
+        margin: 0 !important;
+    }
+    /* Мобильная адаптация для страницы "О нас" */
+@media (max-width: 768px) {
+    .value-icon-container{
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+    /* Hero секция */
+    .about-hero {
+        padding: 60px 0 30px !important;
+    }
+
+    .about-hero h1 {
+        font-size: 2.5rem !important;
+        padding: 0 20px;
+    }
+
+    /* Основной контент */
+    .about-content {
+        padding: 40px 0 !important;
+    }
+
+    .about-grid {
+        grid-template-columns: 1fr !important;
+        gap: 40px !important;
+    }
+
+    .about-text {
+        padding: 0 20px !important;
+        margin-left: 0 !important;
+        order: 2; /* Текст снизу */
+    }
+
+    .about-image {
+        order: 1; /* Картинка сверху */
+        position: static !important;
+    }
+
+    .about-image img {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 500px !important;
+        object-fit: contain !important;
+        border-radius: 0 !important;
+    }
+
+    /* Текстовая часть */
+    .text-content .lead {
+        font-size: 1.2rem !important;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .text-content p {
+        font-size: 1rem !important;
+        text-align: center;
+    }
+
+    .text-content h2 {
+        font-size: 2rem !important;
+        text-align: center;
+        margin: 40px 0 25px !important;
+    }
+
+    .text-content h2::after {
+        left: 50% !important;
+        transform: translateX(-50%);
+    }
+
+    /* Ценности */
+    .values-list {
+        margin: 30px 0 !important;
+    }
+
+    .value-item {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 15px !important;
+        margin-bottom: 30px !important;
+        padding: 0 10px;
+    }
+
+    .value-icon {
+        font-size: 2.5rem !important;
+        margin-top: 0 !important;
+    }
+
+    .value-content h3 {
+        font-size: 1.2rem !important;
+    }
+
+    .value-content p {
+        font-size: 0.95rem !important;
+    }
+
+    /* CTA блок */
+    .about-cta {
+        margin: 40px 0 0 0 !important;
+        padding: 30px 20px !important;
+        text-align: center;
+    }
+
+    .about-cta p {
+        font-size: 1.1rem !important;
+    }
+
+    .cta-buttons {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 15px !important;
+    }
+
+    .cta-button {
+        width: 100% !important;
+        max-width: 280px;
+        padding: 16px 25px !important;
+    }
+
+    /* Блок истории */
+    .history-section {
+        padding: 60px 20px !important;
+    }
+
+    .history-content h2 {
+        font-size: 2.2rem !important;
+        padding: 0 10px;
+    }
+
+    .history-content p {
+        font-size: 1.1rem !important;
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-hero h1 {
+        font-size: 2rem !important;
+    }
+
+    .about-image img {
+        height: 250px !important;
+    }
+
+    .text-content .lead {
+        font-size: 1.1rem !important;
+    }
+
+    .text-content h2 {
+        font-size: 1.8rem !important;
+    }
+
+    .value-icon {
+        font-size: 2.2rem !important;
+    }
+
+    .history-content h2 {
+        font-size: 1.9rem !important;
+    }
+
+    .history-content p {
+        font-size: 1rem !important;
+    }
+
+    .about-cta {
+        padding: 25px 15px !important;
+    }
+
+    .about-cta p {
+        font-size: 1rem !important;
+    }
+}
+
+@media (max-width: 360px) {
+    .about-hero h1 {
+        font-size: 1.8rem !important;
+    }
+
+    .text-content h2 {
+        font-size: 1.6rem !important;
+    }
+
+    .value-content h3 {
+        font-size: 1.1rem !important;
+    }
+
+    .history-content h2 {
+        font-size: 1.7rem !important;
+    }
+}
+</style>
+<style>
+/* Общий фон для всей страницы */
+body {
+    background-color: #fffaf0;
+}
+
+/* Hero секция */
+.about-hero {
+    background: #fffaf0;
+    padding: 80px 0 40px;
+    text-align: center;
+}
+
+.about-hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0;
+}
+
+/* Основной контент */
+.about-content {
+    padding: 20px 0;
+    background: #fffaf0;
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+}
+
+.about-text {
+    padding-right: 40px;
+    padding-left: 40px; /* Добавляем отступ слева */
+    margin-left: 20px; /* Сдвигаем текст вправо на 2см */
+}
+
+.text-content .lead {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: #333;
+    line-height: 1.7;
+    margin-bottom: 30px;
+    font-weight: 500;
+}
+
+.text-content p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.1rem;
+    color: #666;
+    line-height: 1.7;
+    margin-bottom: 25px;
+}
+
+.text-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: #333;
+    margin: 50px 0 30px;
+    position: relative;
+}
+
+.text-content h2::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    border-radius: 2px;
+}
+
+/* Список ценностей */
+.values-list {
+    margin: 40px 0;
+}
+
+.value-item {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 35px;
+    align-items: flex-start;
+}
+
+.value-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.value-content h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.value-content p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Изображение */
+.about-image {
+    position: sticky;
+    top: 100px;
+}
+
+.about-image img {
+    width: 75%;
+    height: 700px;
+    object-fit: cover;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* CTA блок */
+.about-cta {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+    padding: 40px;
+    border-radius: 20px;
+    margin-top: 50px;
+    margin-left: 20px; /* Сдвигаем CTA блок вправо */
+}
+
+.about-cta p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+    color: #333;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.cta-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.cta-button {
+    display: inline-block;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    color: white;
+    padding: 14px 30px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(224, 142, 143, 0.3);
+}
+
+.cta-button.secondary {
+    background: transparent;
+    border: 2px solid #e08e8f;
+    color: #e08e8f;
+    box-shadow: none;
+}
+
+.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(224, 142, 143, 0.4);
+}
+
+.cta-button.secondary:hover {
+    background: #e08e8f;
+    color: white;
+}
+
+/* Блок истории */
+.history-section {
+    padding: 80px 0;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    color: white;
+    text-align: center;
+    border: rgba(94, 94, 94, 0.315) 1px solid;
+}
+
+.history-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 10px 25px;
+    border-radius: 25px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.history-badge span {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.history-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    margin-bottom: 20px;
+}
+
+.history-content p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto;
+    opacity: 0.9;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .about-grid {
+        gap: 60px;
+    }
+
+    .about-text {
+        padding-right: 20px;
+        padding-left: 20px;
+        margin-left: 10px;
+    }
+
+    .about-image img {
+        height: 500px;
+    }
+
+    .about-cta {
+        margin-left: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .about-hero h1 {
+        font-size: 2.8rem;
+    }
+
+    .about-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .about-text {
+        padding-right: 0;
+        padding-left: 0;
+        margin-left: 0;
+        order: 2;
+    }
+
+    .about-image {
+        order: 1;
+        position: static;
+    }
+
+    .about-image img {
+        height: 400px;
+        width: 100%;
+    }
+
+    .text-content h2 {
+        font-size: 2.2rem;
+    }
+
+    .value-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .cta-button {
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .about-cta {
+        margin-left: 0;
+        padding: 30px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-hero h1 {
+        font-size: 2.3rem;
+    }
+
+    .about-content {
+        padding: 60px 0;
+    }
+
+    .text-content .lead {
+        font-size: 1.1rem;
+    }
+
+    .history-content h2 {
+        font-size: 2.2rem;
+    }
+
+    .history-content p {
+        font-size: 1.1rem;
+    }
+
+    .about-cta {
+        padding: 25px 15px;
+    }
+}
+</style>
+{% endwith %}
+{% endblock %}

@@ -1,0 +1,403 @@
+{% load static %}
+<!-- Торты по индивидуальному заказу -->
+<section class="custom-cakes">
+    <div class="custom-cakes-container">
+        <div class="section-header">
+            <h2 class="section-title">Торты по индивидуальному заказу</h2>
+            <p class="section-subtitle">Уникальные дизайны, созданные специально для вас</p>
+        </div>
+
+        <div class="cakes-scroll-container">
+            <div class="scroll-arrow left-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#e08e8f">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                </svg>
+            </div>
+
+            <div class="cakes-scroll-wrapper">
+                <div class="cakes-scroll">
+                    {% for cake in custom_cakes %}
+                    <!-- Торт -->
+                    <div class="cake-card">
+                        <div class="cake-image">
+                            <img src="{{ cake.image.url }}" alt="{{ cake.title }}" loading="lazy">
+                            <div class="cake-overlay">
+                                <div class="cake-info">
+                                    <h3>{{ cake.title }}</h3>
+                                    <p>Индивидуальный дизайн по вашему желанию</p>
+                                    <span class="cake-price">Цена по запросу</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="no-cakes">
+                        <p>Скоро здесь появятся наши работы!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="scroll-arrow right-arrow">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#e08e8f">
+                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="custom-order-cta">
+            <p>Не нашли подходящий вариант? Мы создадим торт вашей мечты!</p>
+            <a href="{% url 'contacts' %}" class="order-button">Заказать консультацию</a>
+        </div>
+    </div>
+</section>
+
+<style>
+/* Стили для раздела индивидуальных тортов */
+.custom-cakes {
+    padding: 80px 0;
+    background: linear-gradient(135deg, #fffaf0 0%, #fff5f5 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.custom-cakes-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.2rem;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.section-subtitle {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* Контейнер для скролла */
+.cakes-scroll-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 50px;
+}
+
+.scroll-arrow {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.scroll-arrow:hover {
+    background: #e08e8f;
+    transform: scale(1.1);
+}
+
+.scroll-arrow:hover svg {
+    fill: white;
+}
+
+.left-arrow {
+    margin-right: 20px;
+}
+
+.right-arrow {
+    margin-left: 20px;
+}
+
+.cakes-scroll-wrapper {
+    overflow: hidden;
+    width: 100%;
+}
+
+.cakes-scroll {
+    display: flex;
+    gap: 25px;
+    transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    padding: 10px 5px;
+}
+
+/* Карточки тортов */
+.cake-card {
+    flex: 0 0 380px;
+    height: 480px;
+    border-radius: 25px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    transition: all 0.4s ease;
+    cursor: pointer;
+}
+
+.cake-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 50px rgba(224, 142, 143, 0.25);
+}
+
+.cake-image {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.cake-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+}
+
+.cake-card:hover .cake-image img {
+    transform: scale(1.1);
+}
+
+.cake-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    padding: 30px;
+    transform: translateY(100px);
+    transition: all 0.4s ease;
+    opacity: 0;
+}
+
+.cake-card:hover .cake-overlay {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.cake-info h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.4rem;
+    color: white;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.cake-info p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.cake-price {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: #e08e8f;
+    font-weight: 700;
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 6px 15px;
+    border-radius: 20px;
+}
+
+/* CTA блок */
+.custom-order-cta {
+    text-align: center;
+    background: white;
+    padding: 40px;
+    border-radius: 25px;
+    box-shadow: 0 10px 30px rgba(224, 142, 143, 0.15);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.custom-order-cta p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+    color: #333;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.order-button {
+    display: inline-block;
+    background: linear-gradient(135deg, #e08e8f 0%, #d17a7b 100%);
+    color: white;
+    padding: 16px 35px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(224, 142, 143, 0.3);
+}
+
+.order-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(224, 142, 143, 0.4);
+}
+
+.no-cakes {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .cake-card {
+        flex: 0 0 340px;
+        height: 440px;
+    }
+
+    .section-title {
+        font-size: 2.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .custom-cakes {
+        padding: 60px 0;
+    }
+
+    .section-title {
+        font-size: 2.3rem;
+    }
+
+    .section-subtitle {
+        font-size: 1.1rem;
+    }
+
+    .scroll-arrow {
+        width: 45px;
+        height: 45px;
+        display: none;
+    }
+
+    .cakes-scroll {
+        gap: 20px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 10px;
+    }
+
+    .cake-card {
+        flex: 0 0 300px;
+        height: 400px;
+        scroll-snap-align: start;
+    }
+
+    .custom-order-cta {
+        padding: 30px 25px;
+        margin: 0 20px;
+    }
+
+    .custom-order-cta p {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .section-title {
+        font-size: 2rem;
+    }
+
+    .cake-card {
+        flex: 0 0 280px;
+        height: 380px;
+    }
+
+    .cake-overlay {
+        padding: 20px;
+    }
+
+    .cake-info h3 {
+        font-size: 1.2rem;
+    }
+
+    .order-button {
+        padding: 14px 30px;
+        font-size: 1rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scrollContainer = document.querySelector('.cakes-scroll');
+    const leftArrow = document.querySelector('.left-arrow');
+    const rightArrow = document.querySelector('.right-arrow');
+    const cakeCards = document.querySelectorAll('.cake-card');
+
+    if (cakeCards.length > 0) {
+        const cardWidth = cakeCards[0].offsetWidth + 25;
+        let currentPosition = 0;
+        const maxPosition = (cakeCards.length - 3) * cardWidth;
+
+        function updateArrows() {
+            leftArrow.style.opacity = currentPosition <= 0 ? '0.5' : '1';
+            rightArrow.style.opacity = currentPosition >= maxPosition ? '0.5' : '1';
+        }
+
+        leftArrow.addEventListener('click', function() {
+            if (currentPosition > 0) {
+                currentPosition = Math.max(0, currentPosition - cardWidth);
+                scrollContainer.style.transform = `translateX(-${currentPosition}px)`;
+                updateArrows();
+            }
+        });
+
+        rightArrow.addEventListener('click', function() {
+            if (currentPosition < maxPosition) {
+                currentPosition = Math.min(maxPosition, currentPosition + cardWidth);
+                scrollContainer.style.transform = `translateX(-${currentPosition}px)`;
+                updateArrows();
+            }
+        });
+
+        updateArrows();
+
+        // Добавляем поддержку свайпа на мобильных
+        let startX;
+        let scrollLeft;
+
+        scrollContainer.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].pageX;
+            scrollLeft = currentPosition;
+        });
+
+        scrollContainer.addEventListener('touchmove', function(e) {
+            if (!startX) return;
+            const x = e.touches[0].pageX;
+            const walk = (x - startX) * 2;
+            currentPosition = Math.max(0, Math.min(maxPosition, scrollLeft - walk));
+            scrollContainer.style.transform = `translateX(-${currentPosition}px)`;
+            updateArrows();
+        });
+    }
+});
+</script>
