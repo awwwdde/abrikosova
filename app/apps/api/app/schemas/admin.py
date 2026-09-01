@@ -7,6 +7,8 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import (
+    BackupStatus,
+    BackupType,
     ConsultationSource,
     ConsultationStatus,
     DeliveryMethod,
@@ -19,6 +21,28 @@ Slug = Annotated[str, Field(min_length=1, max_length=200, pattern=r"^[a-z0-9]+(?
 
 # Максимум фотографий на товар — требование договора, в старом коде не проверялось
 MAX_PRODUCT_IMAGES = 6
+
+
+# Подтверждение восстановления: осмысленное слово, а не «yes» — чтобы его
+# нельзя было отправить случайно
+RESTORE_CONFIRMATION = "ВОССТАНОВИТЬ"
+
+
+class BackupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    storage_key: str
+    type: BackupType
+    status: BackupStatus
+    size_bytes: int | None
+    created_at: datetime
+
+
+class BackupRestoreRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    confirm: str
 
 
 class ProductImageOut(BaseModel):

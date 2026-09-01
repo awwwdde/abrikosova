@@ -17,7 +17,6 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
-    Response,
     UploadFile,
     status,
 )
@@ -30,6 +29,7 @@ from app.core.deps import CurrentAdmin, OwnerOnly
 from app.core.security import hash_password
 from app.models import (
     AdminUser,
+    BackupType,
     Category,
     ConsultationRequest,
     ConsultationSource,
@@ -48,6 +48,9 @@ from app.models import (
 )
 from app.schemas.admin import (
     MAX_PRODUCT_IMAGES,
+    RESTORE_CONFIRMATION,
+    BackupOut,
+    BackupRestoreRequest,
     CategoryAdminOut,
     CategoryIn,
     ConsultationAdminOut,
@@ -74,7 +77,7 @@ from app.schemas.admin import (
 from app.schemas.auth import AdminCreate, AdminOut, AdminUpdate
 from app.schemas.common import Page
 from app.schemas.shop import OrderOut, PageContentOut
-from app.services import audit, revalidate, storage
+from app.services import audit, backups, retention, revalidate, storage
 from app.services import catalog as catalog_service
 from app.services import orders as order_service
 
@@ -910,13 +913,81 @@ async def delete_user(
     await session.commit()
 
 
-# --- Резервные копии: только владелец, реализация на следующем этапе ---
+# --- Резервные копии: только владелец ---
 
 
-@router.get("/backups")
-async def list_backups(admin: OwnerOnly, session: SessionDep) -> Response:
-    return Response(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        content='{"detail":"Не реализовано: резервные копии"}',
-        media_type="application/json",
+@router.get("/backups", response_model=list[BackupOut])
+async def list_backups(admin: OwnerOnly, session: SessionDep):
+    return await backups.list_backups(session)
+
+
+@router.post("/backups", response_model=BackupOut, status_code=status.HTTP_201_CREATED)
+async def create_backup(admin: OwnerOnly, session: SessionDep, request: Request):
+    """Ручной запуск копии. Выполняется синхронно: владелица должна увидеть
+    результат сразу, а не гадать, сняласьли копия."""
+    try:
+        record = await backups.create_backup(session, BackupType.MANUAL)
+    except backups.BackupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from None
+
+    await audit.record(
+        session, request, admin, action="create", entity="backup", entity_id=record.id
     )
+    await session.commit()
+    return record
+
+
+@router.post("/backups/{backup_id}/restore", status_code=status.HTTP_204_NO_CONTENT)
+async def restore_backup(
+    backup_id: int,
+    data: BackupRestoreRequest,
+    admin: OwnerOnly,
+    session: SessionDep,
+    request: Request,
+) -> None:
+    """Восстановление из копии — необратимая операция.
+
+    Требует явного подтверждения в теле запроса: случайный запрос по этому
+    адресу не должен затирать боевые данные. Пишется в журнал до выполнения,
+    чтобы след остался даже если восстановление оборвётся.
+    """
+    if data.confirm != RESTORE_CONFIRMATION:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Для подтверждения передайте confirm={RESTORE_CONFIRMATION}",
+        )
+
+    await audit.record(
+        session, request, admin, action="restore", entity="backup", entity_id=backup_id
+    )
+    await session.commit()
+
+    try:
+        await backups.restore_backup(session, backup_id)
+    except backups.BackupError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+
+
+@router.delete("/backups/{backup_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_backup(
+    backup_id: int, admin: OwnerOnly, session: SessionDep, request: Request
+) -> None:
+    await audit.record(
+        session, request, admin, action="delete", entity="backup", entity_id=backup_id
+    )
+    await backups.delete_backup(session, backup_id)
+
+
+@router.post("/retention/purge")
+async def purge_personal_data(admin: OwnerOnly, session: SessionDep, request: Request):
+    """Ручной запуск очистки ПДн по сроку хранения.
+
+    Обычно выполняется по расписанию; ручной вызов нужен, чтобы показать
+    работу механизма при приёмке и по запросу субъекта данных.
+    """
+    result = await retention.purge_expired(session)
+    await audit.record(session, request, admin, action="purge", entity="personal_data")
+    await session.commit()
+    return result

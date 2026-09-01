@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     smtp_from: str | None = None
     notify_email_to: str | None = None
 
+    # --- Планировщик: ночной бэкап и очистка ПДн ---
+    # Выключается в тестах и там, где несколько экземпляров приложения
+    scheduler_enabled: bool = True
+    scheduler_timezone: str = "Europe/Moscow"
+
     # --- Telegram: опциональный дополнительный канал уведомлений ---
     # Пустой токен полностью выключает канал.
     telegram_bot_token: str | None = None

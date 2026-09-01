@@ -8,6 +8,8 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
 from app.core.redis import close_redis
+from app.core.scheduler import shutdown as stop_scheduler
+from app.core.scheduler import start as start_scheduler
 from app.routers import admin, auth, catalog, health, shop
 from app.services.storage import ensure_bucket
 
@@ -19,7 +21,9 @@ setup_logging(settings.debug)
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # Локальный MinIO стартует пустым — заводим бакет, если его ещё нет
     await ensure_bucket()
+    start_scheduler()
     yield
+    stop_scheduler()
     await close_redis()
 
 
