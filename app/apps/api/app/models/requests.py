@@ -4,7 +4,9 @@
 `custom_cake` — страница «Торты на заказ», `contact_page` — страница «Контакты».
 """
 
-from sqlalchemy import Boolean, Integer, String, Text
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,8 +24,12 @@ class ConsultationRequest(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     # Актуально только для заявки по торту на заказ
     reference_image_key: Mapped[str | None] = mapped_column(String(500))
-    # В старом коде чекбокс был только в вёрстке и на бэкенде не сохранялся
+    # В старом коде чекбокс был только в вёрстке и на бэкенде не сохранялся.
+    # По 152-ФЗ оператор должен уметь доказать факт согласия, поэтому кроме флага
+    # фиксируем момент и редакцию политики, с которой человек согласился.
     consent_pd: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_policy_version: Mapped[str | None] = mapped_column(String(20))
     source: Mapped[ConsultationSource] = mapped_column(
         SAEnum(
             ConsultationSource,

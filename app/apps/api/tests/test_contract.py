@@ -60,11 +60,21 @@ def test_admin_paths_are_separate_from_public() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stub_endpoint_returns_501() -> None:
-    """Нереализованные эндпоинты отвечают явным 501, а не 404 и не пустым 200."""
+async def test_admin_api_requires_authentication() -> None:
+    """Admin API закрыт: без токена — 401, а не 200 и не редирект."""
     transport = ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/catalog/categories")
+        for path in ("/api/v1/admin", "/api/v1/admin/products", "/api/v1/admin/users"):
+            response = await client.get(path)
+            assert response.status_code == 401, path
 
-    assert response.status_code == 501
-    assert "Этап 2" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_admin_rejects_garbage_token() -> None:
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/admin/products", headers={"Authorization": "Bearer not-a-token"}
+        )
+
+    assert response.status_code == 401

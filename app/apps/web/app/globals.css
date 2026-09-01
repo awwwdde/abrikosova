@@ -1,5 +1,210 @@
 @import "tailwindcss";
 
-/* Тема намеренно нейтральная: цвета, шрифты и отступы приходят от дизайнера
-   отдельным этапом и не меняют структуру страниц (см. 06-implementation-plan.md,
-   раздел «Важное примечание про дизайн»). */
+/*
+  Дизайн-токены проекта.
+
+  Палитра тёплая и сдержанная: продукт на фотографиях сам по себе яркий,
+  поэтому интерфейс работает фоном, а не спорит с ним за внимание.
+  Один акцентный цвет вместо набора — на нём только то, что действительно
+  ведёт к действию.
+*/
+@theme {
+  /* Поверхности */
+  --color-canvas: oklch(98.6% 0.006 85);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-sunken: oklch(96.6% 0.008 85);
+
+  /* Текст */
+  --color-ink: oklch(24% 0.014 60);
+  --color-ink-muted: oklch(48% 0.012 60);
+  --color-ink-subtle: oklch(62% 0.01 60);
+
+  /* Границы */
+  --color-line: oklch(90% 0.008 70);
+  --color-line-strong: oklch(82% 0.01 70);
+
+  /* Акцент */
+  --color-accent: oklch(44% 0.106 25);
+  --color-accent-hover: oklch(38% 0.106 25);
+  --color-accent-soft: oklch(95% 0.022 30);
+
+  --color-danger: oklch(48% 0.16 27);
+
+  /*
+    Типографика. Дисплейные размеры заданы через clamp: на широком экране
+    заголовок работает как плакат, на телефоне не разваливается на переносы.
+    Промежуточные значения считает браузер — брейкпоинты для этого не нужны.
+  */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+  --text-3xl: clamp(2.25rem, 1.4rem + 2.6vw, 3.5rem);
+  --text-4xl: clamp(2.75rem, 1.3rem + 4.4vw, 5rem);
+  --text-5xl: clamp(3.25rem, 1rem + 6.6vw, 7rem);
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Радиусы: концентричные пары, а не случайные значения */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* Тени — слоистые и прозрачные, чтобы работать на любом фоне */
+  --shadow-raised:
+    0 1px 1px rgb(60 40 30 / 0.04), 0 2px 4px rgb(60 40 30 / 0.04),
+    0 8px 16px -8px rgb(60 40 30 / 0.06);
+  --shadow-hover:
+    0 1px 1px rgb(60 40 30 / 0.05), 0 4px 8px rgb(60 40 30 / 0.06),
+    0 16px 28px -12px rgb(60 40 30 / 0.1);
+  --shadow-header: 0 1px 0 rgb(60 40 30 / 0.06), 0 8px 24px -16px rgb(60 40 30 / 0.18);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* Текст на macOS без этого выглядит перетяжелённым */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    /* Чем крупнее кегль, тем плотнее должны стоять буквы и строки */
+    letter-spacing: -0.025em;
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  h3 {
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Цифры, которые меняются на месте (цены, счётчики), не должны дёргать вёрстку */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Фото на любом фоне получают одинаковую границу вместо «плавающего» края */
+  .img-outline {
+    outline: 1px solid rgb(0 0 0 / 0.1);
+    outline-offset: -1px;
+  }
+}
+
+@layer components {
+  /*
+    Широкий контейнер: макет рассчитан на большие экраны, но не растягивается
+    бесконечно — за 1760px строка текста становится нечитаемой.
+    Одна ширина и одни поля на всех страницах.
+  */
+  .container-page {
+    width: 100%;
+    max-width: 110rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .container-page {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container-page {
+      padding-inline: 4rem;
+    }
+  }
+
+  /* Вертикальный ритм секций — кратен одному шагу, а не подобран вручную */
+  .section {
+    padding-block: 4rem;
+  }
+
+  @media (min-width: 768px) {
+    .section {
+      padding-block: 6.5rem;
+    }
+  }
+
+  .eyebrow {
+    font-size: var(--text-2xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink-subtle);
+  }
+
+  /*
+    Бенто-сетка.
+
+    Ряды фиксированной высоты, а плитки занимают целое число рядов и колонок —
+    поэтому блоки разного размера всё равно выстраиваются по одной линии.
+    Без фиксированной высоты ряда бенто превращается в неровную мозаику,
+    где каждая плитка тянется по своему содержимому.
+  */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 9rem;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .bento {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-auto-rows: 10.5rem;
+      gap: 1rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .bento {
+      grid-auto-rows: 12rem;
+    }
+  }
+
+  .bento-tile {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-raised);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

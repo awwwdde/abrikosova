@@ -4,10 +4,10 @@
 он признан рабочим в ANALYSIS.md, раздел 3, и перенесён один в один.
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -37,6 +37,8 @@ class Order(Base, TimestampMixin):
     delivery_address: Mapped[str | None] = mapped_column(Text)
     desired_date: Mapped[date | None] = mapped_column(Date)
     consent_pd: Mapped[bool] = mapped_column(nullable=False)
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_policy_version: Mapped[str | None] = mapped_column(String(20))
     total_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[OrderStatus] = mapped_column(
         SAEnum(OrderStatus, name="order_status", values_callable=lambda e: [i.value for i in e]),

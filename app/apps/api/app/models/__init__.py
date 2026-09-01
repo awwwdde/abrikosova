@@ -5,6 +5,7 @@
 """
 
 from app.models.admin import AdminUser, BackupRecord
+from app.models.audit import AuditLogEntry
 from app.models.cart import Cart, CartItem
 from app.models.catalog import Category, Product, ProductImage, SubCategory
 from app.models.content import GalleryItem, PageContent, Review
@@ -27,6 +28,7 @@ from app.models.requests import ConsultationRequest
 __all__ = [
     "AdminRole",
     "AdminUser",
+    "AuditLogEntry",
     "BackupRecord",
     "BackupStatus",
     "BackupType",
