@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { Badge, Card, Picture, Price } from "@/components/ui";
 import { TAG_LABELS, type ProductListItem } from "@/lib/api";
+import { formatSize } from "@/lib/format";
 
 export function ProductCard({ product }: { product: ProductListItem }) {
   const { addItem } = useCart();
@@ -44,7 +45,9 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         >
           {product.name}
         </Link>
-        <p className="text-xs text-ink-subtle">{product.weight}</p>
+        <p className="text-xs text-ink-subtle">
+          {formatSize(product.weight_grams, product.portions_min, product.portions_max)}
+        </p>
 
         <div className="mt-3 flex items-center justify-between gap-2">
           <Price value={product.price} className="text-base font-medium" />

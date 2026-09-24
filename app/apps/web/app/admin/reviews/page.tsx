@@ -11,15 +11,9 @@ import {
   useAdminData,
 } from "@/components/admin/data-table";
 import { Button } from "@/components/ui";
+import { type ReviewAdmin } from "@/lib/api";
 
-type ReviewRow = {
-  id: number;
-  author_name: string;
-  text: string;
-  rating: number | null;
-  is_published: boolean;
-  created_at: string;
-};
+type ReviewRow = ReviewAdmin;
 
 export default function AdminReviewsPage() {
   const { authFetch } = useAdminAuth();

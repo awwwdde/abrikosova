@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Card, LinkButton, Price } from "@/components/ui";
 import { apiGet, ORDER_STATUS_LABELS, type Order } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 
 export const metadata = { title: "Заказ оформлен" };
 // Страница заказа никогда не кэшируется: статус меняется, и это персональные данные
@@ -22,7 +23,21 @@ export default async function OrderPage({ params }: { params: Promise<{ order_nu
       value: order.delivery_method === "delivery" ? "Доставка" : "Самовывоз",
     },
     ...(order.delivery_address ? [{ label: "Адрес", value: order.delivery_address }] : []),
-    ...(order.desired_date ? [{ label: "Желаемая дата", value: order.desired_date }] : []),
+    ...(order.desired_date
+      ? [
+          {
+            label: "Желаемая дата",
+            // Интервал «12-15» из API показываем с тире: «27.09.2026, 12–15»
+            value: order.delivery_interval
+              ? `${formatDate(order.desired_date)}, ${order.delivery_interval.replace("-", "–")}`
+              : formatDate(order.desired_date),
+          },
+        ]
+      : []),
+    // Интервал без даты бэкенд не запрещает — не теряем его
+    ...(!order.desired_date && order.delivery_interval
+      ? [{ label: "Интервал", value: order.delivery_interval.replace("-", "–") }]
+      : []),
     { label: "Статус", value: ORDER_STATUS_LABELS[order.status] ?? order.status },
   ];
 

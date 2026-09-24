@@ -12,16 +12,9 @@ import {
 } from "@/components/admin/data-table";
 import { SingleImageUpload } from "@/components/admin/product-images";
 import { Button, Field, Input, Picture } from "@/components/ui";
-import { ApiError } from "@/lib/api";
+import { ApiError, type GalleryItemAdmin } from "@/lib/api";
 
-type GalleryRow = {
-  id: number;
-  image_key: string;
-  caption: string;
-  description: string | null;
-  is_active: boolean;
-  order: number;
-};
+type GalleryRow = GalleryItemAdmin;
 
 export default function AdminGalleryPage() {
   const { authFetch } = useAdminAuth();

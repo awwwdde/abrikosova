@@ -19,46 +19,69 @@ import {
   type ProductFormValues,
 } from "@/components/admin/product-form";
 import { Button, Card, Checkbox, Field, Input, Select } from "@/components/ui";
-import { ApiError, formatPrice, TAG_LABELS, type Page, type ProductTag } from "@/lib/api";
+import {
+  ApiError,
+  formatPrice,
+  TAG_LABELS,
+  type Page,
+  type ProductAdmin,
+  type SubCategoryAdmin,
+  type CategoryAdmin,
+  type ProductIn,
+} from "@/lib/api";
 
-type ProductRow = {
-  id: number;
-  name: string;
-  slug: string;
-  price: string;
-  is_active: boolean;
-  is_available: boolean;
-  is_featured: boolean;
-  tags: ProductTag[];
-  category_id: number;
-  subcategory_id: number;
-  description: string;
-  composition: string;
-  weight: string;
-  portions: string | null;
-  shelf_life: string | null;
-  storage_conditions: string | null;
-  order: number;
+type ProductRow = ProductAdmin;
+
+type SubCategoryRow = SubCategoryAdmin;
+
+type CategoryRow = CategoryAdmin;
+
+/**
+ * Поля товара, которых пока нет в форме (они появятся в задании 011).
+ *
+ * `PUT /admin/products/{id}` заменяет товар целиком: поле, которое форма не
+ * прислала, бэкенд сбросит в значение по умолчанию — и одно сохранение цены
+ * стёрло бы поводы, КБЖУ и срок изготовления. Поэтому при редактировании эти
+ * поля берутся из загруженного товара и уходят обратно без изменений.
+ * Набор явный и типизирован от ProductIn: если на бэкенде появится новое
+ * обязательное поле, сборка payload перестанет компилироваться.
+ */
+type HiddenFields = Pick<
+  ProductIn,
+  | "kcal"
+  | "proteins"
+  | "fats"
+  | "carbs"
+  | "transport_time"
+  | "lead_time_days"
+  | "occasions"
+  | "dietary"
+>;
+
+/** Значения по умолчанию для нового товара — те же, что в ProductIn на бэкенде. */
+const EMPTY_HIDDEN: HiddenFields = {
+  kcal: null,
+  proteins: null,
+  fats: null,
+  carbs: null,
+  transport_time: null,
+  lead_time_days: 0,
+  occasions: [],
+  dietary: [],
 };
 
-type SubCategoryRow = {
-  id: number;
-  category_id: number;
-  name: string;
-  slug: string;
-  order: number;
-  is_active: boolean;
-  applies_fillings: boolean;
-};
-
-type CategoryRow = {
-  id: number;
-  name: string;
-  slug: string;
-  order: number;
-  is_active: boolean;
-  subcategories: SubCategoryRow[];
-};
+function hiddenFields(product: ProductRow): HiddenFields {
+  return {
+    kcal: product.kcal ?? null,
+    proteins: product.proteins ?? null,
+    fats: product.fats ?? null,
+    carbs: product.carbs ?? null,
+    transport_time: product.transport_time ?? null,
+    lead_time_days: product.lead_time_days,
+    occasions: product.occasions,
+    dietary: product.dietary,
+  };
+}
 
 function toFormValues(product: ProductRow): ProductFormValues {
   return {
@@ -72,8 +95,9 @@ function toFormValues(product: ProductRow): ProductFormValues {
     is_featured: product.is_featured,
     description: product.description,
     composition: product.composition,
-    weight: product.weight,
-    portions: product.portions ?? "",
+    weight_grams: String(product.weight_grams),
+    portions_min: product.portions_min != null ? String(product.portions_min) : "",
+    portions_max: product.portions_max != null ? String(product.portions_max) : "",
     shelf_life: product.shelf_life ?? "",
     storage_conditions: product.storage_conditions ?? "",
     tags: product.tags,
@@ -81,8 +105,11 @@ function toFormValues(product: ProductRow): ProductFormValues {
   };
 }
 
-function toPayload(values: ProductFormValues) {
+function toPayload(values: ProductFormValues, hidden: HiddenFields): ProductIn {
+  const portionsMin = values.portions_min.trim();
+  const portionsMax = values.portions_max.trim();
   return {
+    ...hidden,
     name: values.name.trim(),
     slug: values.slug.trim(),
     category_id: Number(values.category_id),
@@ -93,9 +120,10 @@ function toPayload(values: ProductFormValues) {
     is_featured: values.is_featured,
     description: values.description.trim(),
     composition: values.composition.trim(),
-    weight: values.weight.trim(),
+    weight_grams: Number(values.weight_grams),
     // Пустая строка и «не заполнено» — разные вещи: в БД должен уехать null
-    portions: values.portions.trim() || null,
+    portions_min: portionsMin ? Number(portionsMin) : null,
+    portions_max: portionsMax ? Number(portionsMax) : null,
     shelf_life: values.shelf_life.trim() || null,
     storage_conditions: values.storage_conditions.trim() || null,
     tags: values.tags,
@@ -126,7 +154,10 @@ export default function AdminCatalogPage() {
   );
 
   async function createProduct(values: ProductFormValues) {
-    await authFetch("/admin/products", { method: "POST", body: JSON.stringify(toPayload(values)) });
+    await authFetch("/admin/products", {
+      method: "POST",
+      body: JSON.stringify(toPayload(values, EMPTY_HIDDEN)),
+    });
     setMode("list");
     await products.reload();
   }
@@ -135,7 +166,7 @@ export default function AdminCatalogPage() {
     if (!editing) return;
     await authFetch(`/admin/products/${editing.id}`, {
       method: "PUT",
-      body: JSON.stringify(toPayload(values)),
+      body: JSON.stringify(toPayload(values, hiddenFields(editing))),
     });
     setMode("list");
     setEditing(null);
@@ -169,7 +200,10 @@ export default function AdminCatalogPage() {
       const values = toFormValues(product);
       await authFetch(`/admin/products/${product.id}`, {
         method: "PUT",
-        body: JSON.stringify({ ...toPayload(values), [field]: !product[field] }),
+        body: JSON.stringify({
+          ...toPayload(values, hiddenFields(product)),
+          [field]: !product[field],
+        }),
       });
       await products.reload();
     } catch (error) {

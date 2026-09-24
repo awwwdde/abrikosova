@@ -7,8 +7,9 @@ SECRET_KEY и рабочие креды прокси лежали в репоз�
 
 import logging
 from functools import lru_cache
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import field_validator, model_validator
+from pydantic import ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,9 @@ class Settings(BaseSettings):
 
     environment: str = "development"
     debug: bool = False
+    # Поток SQL-запросов в лог. Отдельно от DEBUG: подробные логи приложения нужны
+    # часто, а SQL на каждый запрос — только когда разбираешься с конкретным запросом.
+    sql_echo: bool = False
 
     database_url: str = "postgresql+asyncpg://abrikosova:abrikosova@localhost:5432/abrikosova"
     redis_url: str = "redis://localhost:6379/0"
@@ -65,6 +69,14 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
     scheduler_timezone: str = "Europe/Moscow"
 
+    # --- Часовой пояс кондитерской ---
+    # «Какой сейчас день у кондитерской»: от него считаются дата в номере заказа,
+    # проверка желаемой даты, срок изготовления и дата события в заявке.
+    # Не путать со scheduler_timezone — тот отвечает только за то, когда запускать
+    # ночные задачи. Совпадают они сейчас случайно: перенос бэкапа на другой пояс
+    # не должен молча сдвигать «сегодня» для покупателя.
+    business_timezone: str = "Europe/Moscow"
+
     # --- Telegram: опциональный дополнительный канал уведомлений ---
     # Пустой токен полностью выключает канал.
     telegram_bot_token: str | None = None
@@ -105,6 +117,22 @@ class Settings(BaseSettings):
         Для прода пустое значение всё равно не пройдёт проверку ниже.
         """
         return value or DEV_JWT_SECRET
+
+    @field_validator("business_timezone", "scheduler_timezone")
+    @classmethod
+    def _known_timezone(cls, value: str, info: ValidationInfo) -> str:
+        """Опечатка в имени пояса должна ронять приложение при старте.
+
+        Иначе ZoneInfoNotFoundError всплыл бы только на первом заказе или
+        заявке — то есть у покупателя, а не у того, кто деплоил, — или
+        невнятной ошибкой APScheduler при запуске планировщика.
+        """
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            env_name = (info.field_name or "").upper()
+            raise ValueError(f"Неизвестный часовой пояс {env_name}: {value!r}") from exc
+        return value
 
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> "Settings":

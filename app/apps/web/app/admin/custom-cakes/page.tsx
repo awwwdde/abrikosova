@@ -8,23 +8,11 @@ import {
   Table,
   useAdminData,
 } from "@/components/admin/data-table";
-import { formatPrice } from "@/lib/api";
+import { formatPrice, type CustomCakeAdmin, type FillingAdmin } from "@/lib/api";
 
-type CakeRow = {
-  id: number;
-  title: string;
-  description: string;
-  price_from: string;
-  is_active: boolean;
-};
+type CakeRow = CustomCakeAdmin;
 
-type FillingRow = {
-  id: number;
-  name: string;
-  description: string;
-  price_per_kg: string;
-  is_available: boolean;
-};
+type FillingRow = FillingAdmin;
 
 export default function AdminCustomCakesPage() {
   const cakes = useAdminData<CakeRow[]>("/admin/custom-cakes");

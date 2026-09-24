@@ -31,10 +31,19 @@ services:
       timeout: 3s
       retries: 10
 
-  # S3-совместимое хранилище для локальной разработки.
+  # S3-совместимое хранилище только для локальной разработки.
   # На проде вместо него — S3 Object Storage Timeweb Cloud, код тот же.
+  #
+  # Образ не официальный: MinIO прекратил публикацию community-образов
+  # (minio/minio на Docker Hub больше не скачивается, quay.io отвечает 401).
+  # pgsty/minio — сборка community-версии от проекта Pigsty
+  # (https://github.com/pgsty/minio), внутри тот же сервер и клиент mc.
+  # Тег зафиксирован ради воспроизводимости: latest однажды привезёт
+  # несовместимую версию незаметно. Обновление: выбрать новый RELEASE.* на
+  # https://hub.docker.com/r/pgsty/minio/tags, поменять тег здесь, выполнить
+  # `docker compose up -d minio` и убедиться, что сервис стал healthy.
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin

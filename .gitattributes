@@ -1,0 +1,24 @@
+# В репозитории все текстовые файлы хранятся с LF, независимо от ОС и core.autocrlf
+# разработчика. Иначе коммит с Windows переводит файлы в CRLF, и в Linux-контейнерах
+# ломаются shell-скрипты, Dockerfile и shebang-строки.
+* text=auto eol=lf
+
+# Бинарные файлы — без преобразования переводов строк и без текстового diff.
+# Верхний регистр перечислен отдельно: на Linux шаблоны чувствительны к регистру,
+# а в old/ есть файлы вида *.PNG и *.MP4.
+*.png binary
+*.PNG binary
+*.jpg binary
+*.JPG binary
+*.jpeg binary
+*.JPEG binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.mp4 binary
+*.MP4 binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary

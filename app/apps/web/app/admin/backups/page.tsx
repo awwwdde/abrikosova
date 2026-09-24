@@ -11,16 +11,7 @@ import {
   useAdminData,
 } from "@/components/admin/data-table";
 import { Button, Card } from "@/components/ui";
-import { ApiError } from "@/lib/api";
-
-type Backup = {
-  id: number;
-  storage_key: string;
-  type: "auto" | "manual";
-  status: "pending" | "success" | "failed";
-  size_bytes: number | null;
-  created_at: string;
-};
+import { ApiError, type Backup } from "@/lib/api";
 
 // То же слово, что проверяет бэкенд. Осмысленное подтверждение вместо «ок»:
 // восстановление затирает текущие данные, и случайно его запускать нельзя.

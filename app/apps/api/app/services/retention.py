@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ConsultationRequest, ConsultationStatus, Order, OrderStatus
+from app.services import storage
 from app.services.orders import retention_cutoff
 
 logger = logging.getLogger(__name__)
@@ -51,10 +52,19 @@ async def purge_expired(session: AsyncSession) -> dict[str, int]:
     )
     requests = list((await session.scalars(requests_query)).all())
 
+    # Фото-референс — такие же персональные данные, как телефон в строке заявки.
+    # Удалить строку и оставить файл в хранилище значило бы потерять на него
+    # ссылку, но не сам файл.
+    reference_keys = [row.reference_image_key for row in requests if row.reference_image_key]
     for row in requests:
         await session.delete(row)
 
     await session.commit()
+
+    # Файлы удаляем после коммита: если коммит упадёт, заявки останутся
+    # вместе со своими фото, а не превратятся в строки с битыми ссылками
+    for key in reference_keys:
+        await storage.delete_image(key)
 
     result = {"orders_anonymized": len(orders), "requests_deleted": len(requests)}
     if orders or requests:

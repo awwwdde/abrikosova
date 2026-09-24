@@ -5,6 +5,23 @@ import { Button, Checkbox, Field, Input, Textarea } from "@/components/ui";
 import { ApiError, apiFetch } from "@/lib/api";
 
 /**
+ * Поля формы в multipart/form-data.
+ *
+ * Пустые значения не отправляем вовсе: в форме нет способа передать null,
+ * а пустая строка для FastAPI — это значение, и необязательное поле
+ * (например, дата) провалило бы валидацию. Content-Type с boundary браузер
+ * выставит сам — apiFetch не ставит заголовок, если тело не строка.
+ */
+function toFormData(fields: Record<string, string | boolean | null>): FormData {
+  const data = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === null || value === "") continue;
+    data.append(key, String(value));
+  }
+  return data;
+}
+
+/**
  * Общая форма заявки: используется и на «Тортах на заказ», и на «Контактах».
  * Одна реализация вместо копии на каждой странице — в старом проекте JS-логика
  * форм дублировалась инлайново в каждом шаблоне.
@@ -15,12 +32,18 @@ export function RequestForm({
   messageLabel,
   messagePlaceholder,
   submitLabel,
+  bodyFormat = "json",
 }: {
   endpoint: string;
   messageField: "description" | "message";
   messageLabel: string;
   messagePlaceholder?: string;
   submitLabel: string;
+  /**
+   * Формат тела запроса. Заявка на торт — multipart/form-data: вместе с полями
+   * может ехать фото-референс (поля для него — задание 007). Обратная связь — JSON.
+   */
+  bodyFormat?: "json" | "multipart";
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -44,15 +67,16 @@ export function RequestForm({
 
     setStatus("sending");
     try {
+      const fields = {
+        name: name.trim(),
+        phone: phone.trim(),
+        [messageField]: message.trim() || null,
+        consent_pd: consent,
+        website: website || null,
+      };
       await apiFetch(endpoint, {
         method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          phone: phone.trim(),
-          [messageField]: message.trim() || null,
-          consent_pd: consent,
-          website: website || null,
-        }),
+        body: bodyFormat === "multipart" ? toFormData(fields) : JSON.stringify(fields),
       });
       setStatus("sent");
     } catch (error) {

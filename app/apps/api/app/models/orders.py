@@ -12,7 +12,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
-from app.models.enums import DeliveryMethod, OrderStatus
+from app.models.enums import DeliveryInterval, DeliveryMethod, OrderStatus
 from app.models.mixins import TimestampMixin
 
 
@@ -36,6 +36,15 @@ class Order(Base, TimestampMixin):
     # а не NOT NULL в БД: при самовывозе поле пустое (01-data-model.md, Order.delivery_address)
     delivery_address: Mapped[str | None] = mapped_column(Text)
     desired_date: Mapped[date | None] = mapped_column(Date)
+    # Интервал к дате (PDF «Этап 1»: «Один путь, дата и интервал в оформлении»).
+    # Для самовывоза — когда клиент придёт, для доставки — окно курьера.
+    delivery_interval: Mapped[DeliveryInterval | None] = mapped_column(
+        SAEnum(
+            DeliveryInterval,
+            name="delivery_interval",
+            values_callable=lambda e: [i.value for i in e],
+        )
+    )
     consent_pd: Mapped[bool] = mapped_column(nullable=False)
     consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     consent_policy_version: Mapped[str | None] = mapped_column(String(20))

@@ -1,3 +1,5 @@
 .next
 node_modules
 next-env.d.ts
+# Сгенерировано openapi-typescript (npm run gen:api), форматированием не трогаем
+lib/api-schema.d.ts

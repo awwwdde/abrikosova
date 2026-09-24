@@ -3,14 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdminAuth } from "@/components/admin/auth-context";
 import { Button, Picture } from "@/components/ui";
-import { ApiError } from "@/lib/api";
-
-type ProductImage = {
-  id: number;
-  storage_key: string;
-  is_main: boolean;
-  order: number;
-};
+import { ApiError, type ProductImage } from "@/lib/api";
 
 const MAX_IMAGES = 6;
 const ACCEPT = "image/jpeg,image/png,image/webp";

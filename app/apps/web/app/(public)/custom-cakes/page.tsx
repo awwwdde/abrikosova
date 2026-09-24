@@ -131,6 +131,7 @@ export default async function CustomCakesPage() {
             <div className="md:col-span-6 md:col-start-7">
               <RequestForm
                 endpoint="/custom-cakes/consultation"
+                bodyFormat="multipart"
                 messageField="description"
                 messageLabel="Пожелания по торту"
                 messagePlaceholder="Повод, желаемая дата, количество гостей, идеи по оформлению"

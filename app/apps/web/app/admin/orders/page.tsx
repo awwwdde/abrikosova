@@ -11,19 +11,9 @@ import {
   useAdminData,
 } from "@/components/admin/data-table";
 import { Select } from "@/components/ui";
-import { formatPrice, ORDER_STATUS_LABELS, type Page } from "@/lib/api";
+import { formatPrice, ORDER_STATUS_LABELS, type Page, type OrderAdminListItem } from "@/lib/api";
 
-type OrderRow = {
-  id: number;
-  order_number: string;
-  customer_name: string;
-  customer_phone: string;
-  delivery_method: "pickup" | "delivery";
-  desired_date: string | null;
-  total_price: string;
-  status: string;
-  created_at: string;
-};
+type OrderRow = OrderAdminListItem;
 
 const STATUSES = Object.keys(ORDER_STATUS_LABELS);
 

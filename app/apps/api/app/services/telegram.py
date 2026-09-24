@@ -77,6 +77,7 @@ def notify_new_order(
     delivery: str,
     customer_name: str,
     items: list[tuple[str, int, str]],
+    when: str | None = None,
 ) -> None:
     """Сообщение о заказе. Формат унаследован от старого сайта — заказчица
     к нему привыкла, менять без нужды не стоит."""
@@ -93,18 +94,25 @@ def notify_new_order(
         f"👤 <b>Клиент:</b> {html.escape(customer_name)}\n"
         f"📞 <b>Телефон:</b> {html.escape(phone)}\n"
         f"🚚 <b>Способ:</b> {html.escape(delivery)}\n"
-        f"💰 <b>Сумма:</b> {html.escape(total)} ₽\n\n"
+        + (f"📅 <b>Когда:</b> {html.escape(when)}\n" if when else "")
+        + f"💰 <b>Сумма:</b> {html.escape(total)} ₽\n\n"
         f"🛒 <b>Состав:</b>\n{lines}",
         context=f"заказ {order_number}",
     )
 
 
-def notify_new_request(request_id: int, source: str, phone: str, name: str) -> None:
+def notify_new_request(
+    request_id: int, source: str, phone: str, name: str, details: str | None = None
+) -> None:
+    """`details` — повод, дата и гости для заявки на торт: с ними Елена может
+    перезвонить уже с предложением, а не с расспросами."""
+    extra = f"\n📅 <b>Событие:</b> {html.escape(details)}" if details else ""
     _send(
         "📝 <b>НОВАЯ ЗАЯВКА</b>\n\n"
         f"№ {request_id}\n"
         f"👤 <b>Имя:</b> {html.escape(name)}\n"
         f"📞 <b>Телефон:</b> {html.escape(phone)}\n"
-        f"📍 <b>Источник:</b> {html.escape(source)}",
+        f"📍 <b>Источник:</b> {html.escape(source)}"
+        f"{extra}",
         context=f"заявка #{request_id}",
     )

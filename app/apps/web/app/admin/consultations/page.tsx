@@ -11,19 +11,14 @@ import {
   useAdminData,
 } from "@/components/admin/data-table";
 import { Select } from "@/components/ui";
-import { CONSULTATION_STATUS_LABELS, SOURCE_LABELS, type Page } from "@/lib/api";
+import {
+  CONSULTATION_STATUS_LABELS,
+  SOURCE_LABELS,
+  type Page,
+  type ConsultationAdmin,
+} from "@/lib/api";
 
-type RequestRow = {
-  id: number;
-  name: string;
-  phone: string;
-  description: string | null;
-  source: string;
-  status: string;
-  consent_pd: boolean;
-  consent_at: string | null;
-  created_at: string;
-};
+type RequestRow = ConsultationAdmin;
 
 const STATUSES = Object.keys(CONSULTATION_STATUS_LABELS);
 

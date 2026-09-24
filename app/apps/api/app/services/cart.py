@@ -6,16 +6,28 @@
 """
 
 import uuid
+from collections.abc import Iterable
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.clock import local_today
 from app.models import Cart, CartItem, Product
 from app.schemas.shop import CartItemOut, CartOut
 
 MAX_QUANTITY = 99
+
+
+def earliest_date(lead_times: Iterable[int]) -> date:
+    """Самая ранняя дата получения заказа.
+
+    Заказ отдаётся целиком, поэтому решает самая долгая позиция: пирожное
+    в наличии и торт «за три дня» в одной корзине — это заказ через три дня.
+    """
+    return local_today() + timedelta(days=max(lead_times, default=0))
 
 
 async def get_or_create_cart(session: AsyncSession, cart_id: uuid.UUID | None) -> Cart:
@@ -83,10 +95,16 @@ async def build_cart_view(session: AsyncSession, cart: Cart) -> CartOut:
                 line_total=line_total,
                 main_image=main_image,
                 is_available=product.is_available,
+                lead_time_days=product.lead_time_days,
             )
         )
 
-    return CartOut(items=items, total_items=total_items, total_price=total_price)
+    return CartOut(
+        items=items,
+        total_items=total_items,
+        total_price=total_price,
+        earliest_date=earliest_date(item.lead_time_days for item in items),
+    )
 
 
 async def add_item(session: AsyncSession, cart: Cart, product_id: int, quantity: int) -> None:

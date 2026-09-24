@@ -22,14 +22,9 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { API_URL, ApiError } from "@/lib/api";
+import { API_URL, ApiError, type AdminUser } from "@/lib/api";
 
-export type AdminUser = {
-  id: number;
-  email: string;
-  role: "owner" | "manager";
-  is_active: boolean;
-};
+export type { AdminUser };
 
 type AuthContextValue = {
   user: AdminUser | null;

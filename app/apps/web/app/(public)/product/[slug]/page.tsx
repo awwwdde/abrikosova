@@ -2,9 +2,26 @@ import { notFound } from "next/navigation";
 import { AddToCart } from "@/components/add-to-cart";
 import { ProductCard } from "@/components/product-card";
 import { Badge, Breadcrumbs, Card, Picture, Price, SectionHeader } from "@/components/ui";
-import { apiGet, TAG_LABELS, type ProductDetail } from "@/lib/api";
+import { apiGet, TAG_LABELS, type Nutrition, type ProductDetail } from "@/lib/api";
+import { formatLeadTime, formatSize } from "@/lib/format";
 
 export const revalidate = 300;
+
+/**
+ * КБЖУ на 100 г одной строкой: «380 ккал · Б 5,1 · Ж 21 · У 42,5».
+ * Decimal приходит из API строкой; незаполненные показатели пропускаем.
+ */
+function formatNutrition(nutrition: Nutrition): string | null {
+  const number = (value: string) =>
+    Number.parseFloat(value).toLocaleString("ru-RU", { maximumFractionDigits: 1 });
+  const parts = [
+    nutrition.kcal != null ? `${number(nutrition.kcal)} ккал` : null,
+    nutrition.proteins != null ? `Б ${number(nutrition.proteins)}` : null,
+    nutrition.fats != null ? `Ж ${number(nutrition.fats)}` : null,
+    nutrition.carbs != null ? `У ${number(nutrition.carbs)}` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
 
 async function loadProduct(slug: string): Promise<ProductDetail | null> {
   try {
@@ -48,8 +65,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   };
 
   const specs = [
-    ["Вес", product.weight],
-    ["Порции", product.portions],
+    ["Размер", formatSize(product.weight_grams, product.portions_min, product.portions_max)],
+    // Подпись «Под заказ», а не «Готовим»: значение уже начинается с «Готовим за…»
+    ["Под заказ", formatLeadTime(product.lead_time_days)],
+    ["Перевозка", product.transport_time],
+    ["КБЖУ на 100 г", product.nutrition ? formatNutrition(product.nutrition) : null],
     ["Срок годности", product.shelf_life],
     ["Хранение", product.storage_conditions],
     ["Состав", product.composition],

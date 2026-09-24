@@ -15,8 +15,11 @@ export type ProductFormValues = {
   is_featured: boolean;
   description: string;
   composition: string;
-  weight: string;
-  portions: string;
+  // Числовые поля держим строками: так пустой ввод отличим от нуля,
+  // а в число превращаем при сборке запроса
+  weight_grams: string;
+  portions_min: string;
+  portions_max: string;
   shelf_life: string;
   storage_conditions: string;
   tags: ProductTag[];
@@ -40,8 +43,9 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   is_featured: false,
   description: "",
   composition: "",
-  weight: "",
-  portions: "",
+  weight_grams: "",
+  portions_min: "",
+  portions_max: "",
   shelf_life: "",
   storage_conditions: "",
   tags: [],
@@ -91,6 +95,11 @@ const TRANSLIT: Record<string, string> = {
   ю: "yu",
   я: "ya",
 };
+
+function isPositiveInt(value: string, max: number): boolean {
+  const trimmed = value.trim();
+  return /^\d+$/.test(trimmed) && Number(trimmed) >= 1 && Number(trimmed) <= max;
+}
 
 export function slugify(value: string): string {
   return value
@@ -145,7 +154,19 @@ export function ProductForm({
     if (!(Number.parseFloat(values.price) > 0)) next.price = "Цена должна быть больше нуля";
     if (!values.description.trim()) next.description = "Заполните описание";
     if (!values.composition.trim()) next.composition = "Заполните состав";
-    if (!values.weight.trim()) next.weight = "Укажите вес";
+    if (!isPositiveInt(values.weight_grams, 100_000))
+      next.weight_grams = "Вес в граммах — целое число больше нуля";
+    // Те же правила, что в ProductIn на бэкенде: оба конца или ни одного, «от» ≤ «до»
+    const min = values.portions_min.trim();
+    const max = values.portions_max.trim();
+    if (min || max) {
+      if (!min || !max)
+        next.portions_min = "Укажите порции «от» и «до» (для одного значения — одинаковые)";
+      else if (!isPositiveInt(min, 1000) || !isPositiveInt(max, 1000))
+        next.portions_min = "Порции — целые числа от 1 до 1000";
+      else if (Number(min) > Number(max))
+        next.portions_min = "Порции «от» не могут быть больше «до»";
+    }
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -247,12 +268,42 @@ export function ProductForm({
           />
         </Field>
 
-        <Field label="Вес" required error={errors.weight} hint="Например: 1 кг">
-          <Input value={values.weight} onChange={(e) => update("weight", e.target.value)} />
+        <Field label="Вес, г" required error={errors.weight_grams} hint="Например: 1200">
+          <Input
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            value={values.weight_grams}
+            onChange={(e) => update("weight_grams", e.target.value)}
+          />
         </Field>
 
-        <Field label="Порции" error={errors.portions} hint="Например: на 8–10 персон">
-          <Input value={values.portions} onChange={(e) => update("portions", e.target.value)} />
+        <Field
+          label="Порций от / до"
+          error={errors.portions_min ?? errors.portions_max}
+          hint="Для одного значения — одинаковые числа; пусто, если порций нет"
+        >
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              aria-label="Порций от"
+              value={values.portions_min}
+              onChange={(e) => update("portions_min", e.target.value)}
+            />
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              aria-label="Порций до"
+              value={values.portions_max}
+              onChange={(e) => update("portions_max", e.target.value)}
+            />
+          </div>
         </Field>
 
         <Field label="Срок годности" error={errors.shelf_life} hint="Например: 3 суток при +2…+6°C">

@@ -13,6 +13,7 @@ from app.main import app
 PUBLIC_PATHS = {
     "/api/v1/health",
     "/api/v1/catalog/categories",
+    "/api/v1/catalog/filters",
     "/api/v1/catalog/products",
     "/api/v1/catalog/products/{slug}",
     "/api/v1/custom-cakes",
@@ -40,6 +41,12 @@ def test_contract_paths_present() -> None:
     paths = set(app.openapi()["paths"])
     assert PUBLIC_PATHS <= paths
     assert AUTH_PATHS <= paths
+
+
+def test_consultation_accepts_multipart() -> None:
+    """Заявка на торт принимает фото-референс, поэтому тело — multipart/form-data."""
+    body = app.openapi()["paths"]["/api/v1/custom-cakes/consultation"]["post"]["requestBody"]
+    assert "multipart/form-data" in body["content"]
 
 
 def test_cart_mutations_are_never_get() -> None:

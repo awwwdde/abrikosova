@@ -11,15 +11,9 @@ import {
   useAdminData,
 } from "@/components/admin/data-table";
 import { Button, Field, Input, Select } from "@/components/ui";
-import { ApiError } from "@/lib/api";
+import { ApiError, type AdminUser } from "@/lib/api";
 
-type UserRow = {
-  id: number;
-  email: string;
-  role: "owner" | "manager";
-  is_active: boolean;
-  created_at: string;
-};
+type UserRow = AdminUser;
 
 export default function AdminUsersPage() {
   const { authFetch, user } = useAdminAuth();

@@ -4,6 +4,10 @@
 после сдачи; контент из старой SQLite не мигрируется (решение зафиксировано в спеке).
 Изображения здесь — плейсхолдер-ключи, реальных файлов в S3 под ними нет.
 
+Структура каталога — пять групп из PDF «Этап 1» (раздел 12, «Пересборка дерева»).
+Цены и веса нескольких позиций взяты из того же документа как ориентир (Медовик,
+Груша, Абрикосовый пирог), остальное — условные значения для проверки фильтров.
+
 Запуск:  python -m app.seed
 Скрипт идемпотентен: повторный запуск на непустой базе ничего не делает.
 На проде сидируется только учётная запись owner (флаг --admin-only).
@@ -12,7 +16,10 @@
 import argparse
 import asyncio
 import logging
+from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import func, select
 
@@ -24,8 +31,10 @@ from app.models import (
     AdminUser,
     Category,
     CustomCake,
+    DietaryTag,
     Filling,
     GalleryItem,
+    Occasion,
     PageContent,
     PageKey,
     Product,
@@ -38,88 +47,460 @@ from app.models import (
 
 logger = logging.getLogger(__name__)
 
-# (название категории, slug, [(подкатегория, slug, applies_fillings)])
+# (название группы, slug, [(подкатегория, slug, applies_fillings)])
 CATEGORIES: list[tuple[str, str, list[tuple[str, str, bool]]]] = [
     (
         "Торты",
         "torty",
         [
+            ("Бенто", "bento", True),
+            ("Детские", "detskie", True),
+            ("Свадебные", "svadebnye", True),
             ("Классические", "klassicheskie", True),
             ("Муссовые", "mussovye", True),
-            ("Детские", "detskie", True),
+            ("Фирменные", "firmennye", True),
         ],
     ),
     (
-        "Десерты",
+        "Десерты и пирожные",
         "deserty",
-        [("Пирожные", "pirozhnye", False), ("Эклеры", "eklery", False)],
+        [
+            ("Современные", "sovremennye", False),
+            ("Классика", "klassika", False),
+            ("Корпусные", "korpusnye", False),
+            ("Трайфлы", "trayfly", False),
+            ("Чизкейки", "chizkeyki", False),
+        ],
     ),
     (
-        "Капкейки",
-        "kapkeyki",
-        [("Ванильные", "vanilnye", False), ("Шоколадные", "shokoladnye", False)],
+        "Печенье и конфеты",
+        "pechene-i-konfety",
+        [
+            ("Овсяное", "ovsyanoe", False),
+            ("Миндальное", "mindalnoe", False),
+            ("Cookies", "cookies", False),
+            ("Трюфели", "tryufeli", False),
+            ("Плитки", "plitki", False),
+        ],
     ),
     (
-        "Сезонное",
-        "sezonnoe",
-        [("Новогоднее", "novogodnee", False), ("Пасхальное", "pashalnoe", False)],
+        "Пироги и рулеты",
+        "pirogi-i-rulety",
+        [("Пироги", "pirogi", False), ("Рулеты", "rulety", False)],
+    ),
+    (
+        "Наборы и подарки",
+        "nabory-i-podarki",
+        [
+            ("Ассорти", "assorti", False),
+            ("Наборы конфет", "nabory-konfet", False),
+            ("Сертификат", "sertifikat", False),
+        ],
     ),
 ]
 
-# (название, slug, индекс категории, индекс подкатегории внутри категории, цена, метки, featured)
-PRODUCTS: list[tuple[str, str, int, int, str, list[ProductTag], bool]] = [
-    ("Торт «Медовик»", "tort-medovik", 0, 0, "2400.00", [ProductTag.HIT], True),
-    ("Торт «Наполеон»", "tort-napoleon", 0, 0, "2600.00", [], True),
-    ("Торт «Красный бархат»", "tort-krasnyy-barhat", 0, 0, "2900.00", [ProductTag.HIT], True),
-    ("Муссовый торт «Манго-маракуйя»", "muss-mango", 0, 1, "3200.00", [ProductTag.NEW], True),
-    ("Муссовый торт «Три шоколада»", "muss-tri-shokolada", 0, 1, "3400.00", [], False),
-    ("Детский торт «Единорог»", "detskiy-edinorog", 0, 2, "3800.00", [], False),
-    ("Детский торт «Машинка»", "detskiy-mashinka", 0, 2, "3600.00", [], False),
-    ("Пирожное «Картошка»", "pirozhnoe-kartoshka", 1, 0, "180.00", [], False),
-    ("Пирожное «Тирамису»", "pirozhnoe-tiramisu", 1, 0, "260.00", [ProductTag.HIT], True),
-    ("Эклер с ванильным кремом", "ekler-vanil", 1, 1, "190.00", [], False),
-    ("Эклер с фисташкой", "ekler-fistashka", 1, 1, "230.00", [ProductTag.NEW], False),
-    ("Капкейк ванильный", "kapkeyk-vanilnyy", 2, 0, "220.00", [], False),
-    ("Капкейк «Ваниль-малина»", "kapkeyk-vanil-malina", 2, 0, "240.00", [], False),
-    ("Капкейк шоколадный", "kapkeyk-shokoladnyy", 2, 1, "230.00", [], True),
-    ("Капкейк «Шоколад-карамель»", "kapkeyk-shokolad-karamel", 2, 1, "250.00", [], False),
-    ("Новогодний набор пряников", "novogodniy-nabor", 3, 0, "1200.00", [ProductTag.SEASON], True),
-    ("Имбирный домик", "imbirnyy-domik", 3, 0, "1800.00", [ProductTag.SEASON], False),
-    ("Пасхальный кулич", "pashalnyy-kulich", 3, 1, "650.00", [ProductTag.SEASON], False),
+
+@dataclass(frozen=True)
+class SeedProduct:
+    """Демо-товар. Датакласс вместо кортежа из десяти позиций: у каждого
+    значения есть имя, и перепутать вес с ценой при правке невозможно."""
+
+    name: str
+    slug: str
+    category: str
+    subcategory: str
+    price: str
+    weight_grams: int
+    composition: str
+    portions: tuple[int, int] | None = None
+    lead_time_days: int = 0
+    occasions: list[Occasion] = field(default_factory=list)
+    dietary: list[DietaryTag] = field(default_factory=list)
+    tags: list[ProductTag] = field(default_factory=list)
+    featured: bool = False
+    # КБЖУ на 100 г
+    nutrition: tuple[str, str, str, str] | None = None
+    shelf_life: str = "3 суток"
+    storage: str = "В холодильнике при +2…+6 °C"
+    transport: str | None = "До 3 часов"
+
+
+PRODUCTS: list[SeedProduct] = [
+    # --- Торты ---
+    SeedProduct(
+        name="Бенто-торт «Ваниль и клубника»",
+        slug="bento-vanil-klubnika",
+        category="torty",
+        subcategory="bento",
+        price="1500.00",
+        weight_grams=450,
+        composition="Ванильный бисквит, сливочный крем, клубничное конфи",
+        portions=(2, 3),
+        lead_time_days=1,
+        occasions=[Occasion.BIRTHDAY, Occasion.TEA],
+        tags=[ProductTag.HIT],
+        featured=True,
+    ),
+    SeedProduct(
+        name="Детский торт «Молочная девочка»",
+        slug="detskiy-molochnaya-devochka",
+        category="torty",
+        subcategory="detskie",
+        price="3800.00",
+        weight_grams=1500,
+        composition="Коржи на сгущённом молоке, сливочный крем, ягоды",
+        portions=(12, 15),
+        lead_time_days=3,
+        occasions=[Occasion.KIDS, Occasion.BIRTHDAY],
+        dietary=[DietaryTag.LOW_SUGAR],
+        featured=True,
+        nutrition=("310.0", "5.2", "17.8", "32.0"),
+    ),
+    SeedProduct(
+        name="Свадебный торт двухъярусный",
+        slug="svadebnyy-dvuhyarusnyy",
+        category="torty",
+        subcategory="svadebnye",
+        price="12000.00",
+        weight_grams=4000,
+        composition="Состав согласуется с Еленой: начинка на выбор из авторской линии",
+        portions=(35, 45),
+        lead_time_days=14,
+        occasions=[Occasion.WEDDING],
+    ),
+    SeedProduct(
+        name="Торт «Медовик»",
+        slug="tort-medovik",
+        category="torty",
+        subcategory="klassicheskie",
+        price="2600.00",
+        weight_grams=1200,
+        composition="Мука, мёд, сливки, сливочное масло, сахар, яйцо",
+        portions=(10, 12),
+        occasions=[Occasion.BIRTHDAY, Occasion.TEA],
+        tags=[ProductTag.HIT],
+        featured=True,
+        nutrition=("380.0", "5.1", "21.0", "42.5"),
+    ),
+    SeedProduct(
+        name="Муссовый торт «Базилик и маракуйя»",
+        slug="muss-bazilik-marakuyya",
+        category="torty",
+        subcategory="mussovye",
+        price="3400.00",
+        weight_grams=1200,
+        composition="Миндальный бисквит, мусс из маракуйи, базиликовое желе",
+        portions=(10, 12),
+        lead_time_days=2,
+        occasions=[Occasion.BIRTHDAY, Occasion.CORPORATE],
+        dietary=[DietaryTag.GLUTEN_FREE],
+        tags=[ProductTag.NEW],
+        featured=True,
+    ),
+    SeedProduct(
+        name="Торт «Абрикос, миндаль и белый перец»",
+        slug="tort-abrikos-mindal-perets",
+        category="torty",
+        subcategory="firmennye",
+        price="3600.00",
+        weight_grams=1200,
+        composition="Миндальный бисквит, абрикосовое конфи, крем с ноткой белого перца",
+        portions=(10, 12),
+        lead_time_days=2,
+        occasions=[Occasion.BIRTHDAY, Occasion.CORPORATE],
+        tags=[ProductTag.HIT],
+    ),
+    # --- Десерты и пирожные ---
+    SeedProduct(
+        name="Медовик порционный",
+        slug="medovik-portsionnyy",
+        category="deserty",
+        subcategory="klassika",
+        price="480.00",
+        weight_grams=100,
+        composition="Мука, мёд, сливки, сливочное масло, сахар, яйцо",
+        portions=(1, 1),
+        occasions=[Occasion.TEA],
+        shelf_life="2 суток",
+    ),
+    SeedProduct(
+        name="Корпусный десерт «Груша»",
+        slug="korpusnyy-grusha",
+        category="deserty",
+        subcategory="korpusnye",
+        price="650.00",
+        weight_grams=60,
+        composition="Грушевое конфи, ванильный мусс, миндальный сабле",
+        portions=(1, 1),
+        occasions=[Occasion.TEA],
+        tags=[ProductTag.NEW],
+        featured=True,
+        shelf_life="2 суток",
+    ),
+    SeedProduct(
+        name="Корпусный десерт «Кофейное зерно»",
+        slug="korpusnyy-kofeynoe-zerno",
+        category="deserty",
+        subcategory="korpusnye",
+        price="650.00",
+        weight_grams=60,
+        composition="Кофейный мусс, карамель, шоколадный бисквит",
+        portions=(1, 1),
+        occasions=[Occasion.TEA],
+        shelf_life="2 суток",
+    ),
+    SeedProduct(
+        name="Трайфл «Шпинат и лайм»",
+        slug="trayfl-shpinat-laym",
+        category="deserty",
+        subcategory="trayfly",
+        price="420.00",
+        weight_grams=150,
+        composition="Шпинатный бисквит, крем с лаймом, сливки",
+        portions=(1, 1),
+        occasions=[Occasion.TEA],
+        dietary=[DietaryTag.LOW_SUGAR],
+        shelf_life="1 сутки",
+    ),
+    SeedProduct(
+        name="Чизкейк без глютена",
+        slug="chizkeyk-bez-glyutena",
+        category="deserty",
+        subcategory="chizkeyki",
+        price="390.00",
+        weight_grams=120,
+        composition="Сливочный сыр, яйцо, сахар, миндальная мука",
+        portions=(1, 1),
+        occasions=[Occasion.TEA],
+        dietary=[DietaryTag.GLUTEN_FREE],
+        nutrition=("290.0", "7.0", "20.0", "19.0"),
+    ),
+    # --- Печенье и конфеты ---
+    SeedProduct(
+        name="Овсяное печенье с клюквой",
+        slug="ovsyanoe-klyukva",
+        category="pechene-i-konfety",
+        subcategory="ovsyanoe",
+        price="300.00",
+        weight_grams=200,
+        composition="Овсяные хлопья, мука, сливочное масло, клюква, тростниковый сахар",
+        portions=(3, 4),
+        occasions=[Occasion.TEA],
+        shelf_life="14 суток",
+        storage="В сухом месте при комнатной температуре",
+        transport=None,
+    ),
+    SeedProduct(
+        name="Миндальное печенье",
+        slug="mindalnoe-pechene",
+        category="pechene-i-konfety",
+        subcategory="mindalnoe",
+        price="350.00",
+        weight_grams=180,
+        composition="Миндальная мука, белок, сахар",
+        portions=(3, 4),
+        occasions=[Occasion.TEA],
+        dietary=[DietaryTag.GLUTEN_FREE, DietaryTag.LACTOSE_FREE],
+        shelf_life="14 суток",
+        storage="В сухом месте при комнатной температуре",
+        transport=None,
+    ),
+    SeedProduct(
+        name="Трюфели ручной работы, 9 шт.",
+        slug="tryufeli-9",
+        category="pechene-i-konfety",
+        subcategory="tryufeli",
+        price="900.00",
+        weight_grams=135,
+        composition="Тёмный шоколад 70%, сливки, какао",
+        occasions=[Occasion.TEA, Occasion.CORPORATE],
+        shelf_life="10 суток",
+    ),
+    # --- Пироги и рулеты ---
+    SeedProduct(
+        name="Абрикосовый пирог",
+        slug="abrikosovyy-pirog",
+        category="pirogi-i-rulety",
+        subcategory="pirogi",
+        price="3400.00",
+        weight_grams=1200,
+        composition="Мука, абрикос, сливочное масло, сахар",
+        portions=(10, 12),
+        lead_time_days=1,
+        occasions=[Occasion.TEA, Occasion.BIRTHDAY],
+        dietary=[DietaryTag.LOW_SUGAR],
+        tags=[ProductTag.HIT],
+        featured=True,
+        nutrition=("265.0", "4.0", "12.5", "34.0"),
+    ),
+    SeedProduct(
+        name="Рулет маковый",
+        slug="rulet-makovyy",
+        category="pirogi-i-rulety",
+        subcategory="rulety",
+        price="900.00",
+        weight_grams=500,
+        composition="Дрожжевое тесто, мак, мёд, изюм",
+        portions=(5, 6),
+        occasions=[Occasion.TEA],
+        shelf_life="3 суток",
+        storage="При комнатной температуре",
+    ),
+    # --- Наборы и подарки ---
+    SeedProduct(
+        name="Ассорти пирожных, 6 шт.",
+        slug="assorti-6",
+        category="nabory-i-podarki",
+        subcategory="assorti",
+        price="2800.00",
+        weight_grams=480,
+        composition="Состав каждого пирожного — в описании набора",
+        portions=(4, 6),
+        lead_time_days=1,
+        occasions=[Occasion.CORPORATE, Occasion.BIRTHDAY],
+        featured=True,
+    ),
+    SeedProduct(
+        name="Подарочный набор конфет",
+        slug="nabor-konfet",
+        category="nabory-i-podarki",
+        subcategory="nabory-konfet",
+        price="1600.00",
+        weight_grams=240,
+        composition="Тёмный и молочный шоколад, пралине, орехи",
+        occasions=[Occasion.CORPORATE],
+        tags=[ProductTag.SEASON],
+        shelf_life="30 суток",
+        storage="При +15…+18 °C",
+        transport=None,
+    ),
+    SeedProduct(
+        name="Подарочный сертификат на 3000 ₽",
+        slug="sertifikat-3000",
+        category="nabory-i-podarki",
+        subcategory="sertifikat",
+        price="3000.00",
+        weight_grams=1,
+        composition="Сертификат действует на все позиции витрины и торты на заказ",
+        shelf_life="Действует 6 месяцев",
+        storage="—",
+        transport=None,
+    ),
 ]
 
 FILLINGS: list[tuple[str, str, str]] = [
-    ("Ванильный крем", "Классический крем на основе натуральной ванили", "900.00"),
-    ("Шоколадный ганаш", "Тёмный шоколад 54% и сливки", "1100.00"),
-    ("Малиновое конфи", "Ягодная прослойка из свежей малины", "1200.00"),
-    ("Солёная карамель", "Карамель на сливочном масле с морской солью", "1050.00"),
-    ("Фисташковый пралине", "Обжаренная фисташка с нежным кремом", "1400.00"),
+    ("Абрикос, миндаль и белый перец", "Перец подчёркивает сладость фрукта", "2400.00"),
+    ("Базилик и маракуйя", "Свежая кислинка маракуйи и травяная нота базилика", "2600.00"),
+    ("Шпинат и лайм", "Зелёный бисквит и крем с цедрой лайма", "2500.00"),
+    ("Молочная девочка", "Нежные коржи на сгущёнке — любимая начинка детских тортов", "2200.00"),
+    ("Три шоколада", "Тёмный, молочный и белый шоколадный мусс", "2300.00"),
+    ("Медовик", "Классические медовые коржи со сливочным кремом", "2100.00"),
 ]
 
 CUSTOM_CAKES: list[tuple[str, str, str]] = [
-    ("Свадебный многоярусный", "Двух- и трёхъярусные торты с живыми цветами", "6000.00"),
-    ("Юбилейный с декором", "Индивидуальный дизайн под событие", "4500.00"),
-    ("Корпоративный с логотипом", "Печать логотипа на съедобной бумаге", "5000.00"),
-    ("Бенто-торт", "Маленький торт на одну-две персоны", "1500.00"),
+    ("Свадебный многоярусный", "Ярусы и декор под стилистику торжества", "12000.00"),
+    ("Торт на юбилей", "Авторская начинка и декор под событие", "5000.00"),
+    ("Корпоративный с логотипом", "Торт для команды или партнёров", "6000.00"),
+    ("Детский тематический", "Без мастики, сниженный сахар, тема праздника", "4500.00"),
 ]
 
-GALLERY: list[str] = [
-    "Свадебный торт с цветами",
-    "Торт на юбилей 50 лет",
-    "Детский торт с динозаврами",
-    "Капкейки на выпускной",
-    "Торт с зеркальной глазурью",
-    "Пряничный домик",
-    "Корпоративный торт с логотипом",
+# (подпись, повод, ярусы, гости, месяц)
+GALLERY: list[tuple[str, Occasion, int | None, int | None, date]] = [
+    ("Свадебный торт с живыми цветами", Occasion.WEDDING, 3, 60, date(2026, 6, 1)),
+    ("Свадебный торт в стиле минимализм", Occasion.WEDDING, 2, 45, date(2026, 8, 1)),
+    ("Торт на шестилетие с единорогом", Occasion.KIDS, 1, 12, date(2026, 5, 1)),
+    ("Бенто-торты для выпускного", Occasion.KIDS, 1, 2, date(2026, 6, 1)),
+    ("Торт на юбилей 50 лет", Occasion.BIRTHDAY, 2, 30, date(2026, 3, 1)),
+    ("Торт с логотипом компании", Occasion.CORPORATE, 1, 25, date(2026, 4, 1)),
+    ("Абрикосовый пирог к чаю", Occasion.TEA, None, None, date(2026, 7, 1)),
 ]
 
-REVIEWS: list[tuple[str, str, int]] = [
-    ("Мария", "Заказывала торт на день рождения дочери — восторг у всех гостей!", 5),
-    ("Алексей", "Очень вкусный «Наполеон», забрал самовывозом ровно в срок.", 5),
-    ("Ольга", "Красивый декор, сладость в меру. Буду заказывать ещё.", 5),
-    ("Ирина", "Понравился муссовый торт, доставили аккуратно.", 4),
-    ("Дмитрий", "Капкейки на корпоратив — коллеги были довольны.", 5),
+# (автор, текст, оценка, slug товара или None — общий отзыв)
+REVIEWS: list[tuple[str, str, int, str | None]] = [
+    (
+        "Мария",
+        "Заказывала торт на день рождения дочери — дети съели всё.",
+        5,
+        "detskiy-molochnaya-devochka",
+    ),
+    (
+        "Алексей",
+        "Медовик как у бабушки, только лучше. Забрал самовывозом ровно в срок.",
+        5,
+        "tort-medovik",
+    ),
+    ("Ольга", "Абрикосовый пирог берём каждые выходные к чаю.", 5, "abrikosovyy-pirog"),
+    ("Ирина", "Базилик с маракуйей — необычно и очень свежо.", 5, "muss-bazilik-marakuyya"),
+    ("Дмитрий", "Ассорти на корпоратив — коллеги были довольны.", 4, "assorti-6"),
+    ("Анна", "Свадебный торт совпал с эскизом до мелочей. Спасибо Елене!", 5, None),
 ]
+
+# Стартовая структура контента страниц. Это и есть договорённость с фронтендом
+# о форме JSON в PageContent.content (см. new/spec/03-pages-wireframes.md);
+# тексты — черновые, финальные пишутся на этапе текстов.
+PAGE_CONTENT: dict[PageKey, dict[str, Any]] = {
+    PageKey.HOME: {
+        "hero": {
+            "eyebrow": "Авторская кондитерская · Москва",
+            "title": "Торты и десерты по авторским рецептурам",
+            "subtitle": "Кофейня на Гжатской, доставка по Москве и самовывоз.",
+            "primary_cta": {"label": "Смотреть витрину", "href": "/catalog"},
+            "secondary_cta": {"label": "Заказать торт", "href": "/custom-cakes"},
+        },
+        "ticker": ["Медовик", "Корпусные десерты", "Торты под событие", "Кофе с собой"],
+        "author": {
+            "quote": "Начинки я придумываю сама, а торт под событие мы собираем вместе с вами.",
+            "signature": "Елена Абрикосова · шеф-кондитер",
+        },
+        "coffee_shop": {
+            "title": "Кофейня на Гжатской",
+            "text": "Витрина с десертами дня и кофе с собой.",
+        },
+        "final_cta": {"title": "Соберите заказ или напишите Елене"},
+    },
+    PageKey.ABOUT: {
+        "title": "О кондитерской",
+        "main_text": "Черновой текст о Елене и подходе. Заменяется на этапе текстов.",
+        "principles": [
+            {"title": "Автор", "text": "Начинки придумывает Елена"},
+            {"title": "Вкус со своим почерком", "text": "Сочетания, которых нет у других"},
+            {"title": "Заказ под событие", "text": "Эскиз, начинку и вес согласуем лично"},
+        ],
+        "coffee_shop": {"title": "Кофейня", "text": "Приходите на Гжатскую, 5к8."},
+    },
+    PageKey.CUSTOM_CAKES: {
+        "title": "Торты на заказ",
+        "subtitle": "Торт под вашу дату, повод и число гостей",
+        # Четыре этапа и точки связи — ответ на тревогу «про меня не забыли?»
+        # (PDF «Этап 1», путь Ани, решение 03)
+        "stages": [
+            {"title": "Заявка", "text": "Повод, дата, число гостей и референсы"},
+            {"title": "Согласование", "text": "Эскиз, начинка, вес и цена — лично с Еленой"},
+            {"title": "Предоплата", "text": "Фиксируем дату и интервал"},
+            {"title": "Получение", "text": "Доставка по Москве или самовывоз с Гжатской"},
+        ],
+        "consultation_text": "Оставьте заявку — Елена свяжется, чтобы обсудить детали.",
+    },
+    PageKey.CONTACTS: {
+        "title": "Контакты",
+        # Блок 05 карточки товара «Доставка и оплата» читает эти поля отсюда,
+        # чтобы условия не дублировались в каждом товаре
+        "delivery": "Доставка по Москве",
+        "pickup": "Самовывоз с Гжатской, 5к8",
+        "payment": "Оплата при получении",
+        "socials": [{"label": "Telegram", "href": "https://t.me/"}],
+    },
+}
+
+CONTACTS_FIELDS: dict[str, Any] = {
+    "address": "Москва, ул. Гжатская, 5к8",
+    "phone": "8-962-352-22-77",
+    "work_hours_weekdays": "пн–пт 08:00–20:00",
+    "work_hours_weekend": "сб–вс 09:00–20:00",
+    "delivery_hours": "доставка 09:00–21:00",
+    "yandex_rating": Decimal("5.0"),
+    "yandex_reviews_count": 166,
+}
 
 
 async def _seed_admin(session, email: str, password_hash: str) -> None:
@@ -134,13 +515,54 @@ async def _seed_admin(session, email: str, password_hash: str) -> None:
     logger.info("Создан администратор owner: %s", email)
 
 
+def _product(seed: SeedProduct, category: Category, order: int) -> Product:
+    subcategory = next(s for s in category.subcategories if s.slug == seed.subcategory)
+    kcal, proteins, fats, carbs = (
+        (Decimal(v) for v in seed.nutrition) if seed.nutrition else (None,) * 4
+    )
+    product = Product(
+        name=seed.name,
+        slug=seed.slug,
+        category_id=category.id,
+        subcategory_id=subcategory.id,
+        price=Decimal(seed.price),
+        is_available=True,
+        is_active=True,
+        description=f"Демо-описание: {seed.name}. Заменяется реальным текстом через админку.",
+        composition=seed.composition,
+        weight_grams=seed.weight_grams,
+        portions_min=seed.portions[0] if seed.portions else None,
+        portions_max=seed.portions[1] if seed.portions else None,
+        kcal=kcal,
+        proteins=proteins,
+        fats=fats,
+        carbs=carbs,
+        shelf_life=seed.shelf_life,
+        storage_conditions=seed.storage,
+        transport_time=seed.transport,
+        lead_time_days=seed.lead_time_days,
+        tags=seed.tags,
+        occasions=seed.occasions,
+        dietary=seed.dietary,
+        is_featured=seed.featured,
+        order=order,
+    )
+    product.images = [
+        ProductImage(
+            storage_key=f"placeholder/products/{seed.slug}-{i}.webp", is_main=(i == 0), order=i
+        )
+        for i in range(2)
+    ]
+    return product
+
+
 async def _seed_demo(session) -> None:
     exists = await session.scalar(select(func.count()).select_from(Category))
     if exists:
         logger.info("Каталог уже наполнен — пропускаю демо-данные")
         return
 
-    categories: list[Category] = []
+    categories: dict[str, Category] = {}
     for order, (name, slug, subs) in enumerate(CATEGORIES):
         category = Category(name=name, slug=slug, order=order, is_active=True)
         category.subcategories = [
@@ -153,38 +575,18 @@ async def _seed_demo(session) -> None:
             )
             for sub_order, (sub_name, sub_slug, applies) in enumerate(subs)
         ]
-        categories.append(category)
+        categories[slug] = category
         session.add(category)
 
     await session.flush()
 
-    for order, (name, slug, cat_idx, sub_idx, price, tags, featured) in enumerate(PRODUCTS):
-        category = categories[cat_idx]
-        product = Product(
-            name=name,
-            slug=slug,
-            category_id=category.id,
-            subcategory_id=category.subcategories[sub_idx].id,
-            price=Decimal(price),
-            is_available=True,
-            is_active=True,
-            description=f"Демо-описание: {name}. Заменяется реальным текстом через админку.",
-            composition="Мука, сахар, яйца, сливочное масло, натуральные ароматизаторы",
-            weight="1 кг",
-            portions="на 8–10 персон",
-            shelf_life="3 суток при +2…+6°C",
-            storage_conditions="Хранить в холодильнике, не замораживать",
-            tags=tags,
-            is_featured=featured,
-            order=order,
-        )
-        product.images = [
-            ProductImage(
-                storage_key=f"placeholder/products/{slug}-{i}.webp", is_main=(i == 0), order=i
-            )
-            for i in range(2)
-        ]
+    products: dict[str, Product] = {}
+    for order, seed in enumerate(PRODUCTS):
+        product = _product(seed, categories[seed.category], order)
+        products[seed.slug] = product
         session.add(product)
+
+    await session.flush()
 
     for order, (name, description, price) in enumerate(FILLINGS):
         session.add(
@@ -210,19 +612,24 @@ async def _seed_demo(session) -> None:
             )
         )
 
-    for order, caption in enumerate(GALLERY):
+    for order, (caption, occasion, tiers, guests, made_in) in enumerate(GALLERY):
         session.add(
             GalleryItem(
                 image_key=f"placeholder/gallery/{order}.webp",
                 caption=caption,
+                occasion=occasion,
+                tiers=tiers,
+                guests=guests,
+                made_in=made_in,
                 is_active=True,
                 order=order,
             )
         )
 
-    for author, text, rating in REVIEWS:
+    for author, text, rating, product_slug in REVIEWS:
         session.add(
             Review(
+                product_id=products[product_slug].id if product_slug else None,
                 author_name=author,
                 text=text,
                 rating=rating,
@@ -232,10 +639,12 @@ async def _seed_demo(session) -> None:
         )
 
     for page_key in PageKey:
-        session.add(PageContent(page_key=page_key, content={}))
+        extra = CONTACTS_FIELDS if page_key is PageKey.CONTACTS else {}
+        session.add(PageContent(page_key=page_key, content=PAGE_CONTENT[page_key], **extra))
 
     logger.info(
-        "Созданы демо-данные: %d категорий, %d товаров, %d начинок, %d работ в галерее, %d отзывов",
+        "Созданы демо-данные: %d групп каталога, %d товаров, %d начинок, "
+        "%d работ в галерее, %d отзывов",
         len(CATEGORIES),
         len(PRODUCTS),
         len(FILLINGS),

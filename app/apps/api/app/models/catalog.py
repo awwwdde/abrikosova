@@ -1,10 +1,13 @@
 """Каталог: Category → SubCategory → Product → ProductImage.
 
 Структура унаследована от старой Django-модели (ANALYSIS.md, раздел 3) и расширена
-полями, обязательными по договору (01-data-model.md, разделы 1-4).
+полями, обязательными по договору (01-data-model.md, разделы 1-4), и полями карточки
+из PDF «Этап 1 · Аналитика и проектирование» (раздел 14): вес и порции числами,
+КБЖУ, ограничения в питании, поводы, срок изготовления и перевозка.
 """
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -22,8 +25,16 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
-from app.models.enums import ProductTag
+from app.models.enums import DietaryTag, Occasion, ProductTag
 from app.models.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.content import Review
+
+
+def _enum_array(enum_cls: type, name: str) -> ARRAY:
+    """Массив PostgreSQL-enum: в БД хранятся значения (`"kids"`), а не имена (`"KIDS"`)."""
+    return ARRAY(SAEnum(enum_cls, name=name, values_callable=lambda e: [i.value for i in e]))
 
 
 class Category(Base):
@@ -64,8 +75,20 @@ class Product(Base, TimestampMixin):
     __tablename__ = "products"
     __table_args__ = (
         CheckConstraint("price > 0", name="ck_product_price_positive"),
+        CheckConstraint("weight_grams > 0", name="ck_product_weight_positive"),
+        # Порции — диапазон «от–до». Либо не заданы оба конца (у набора конфет
+        # порций нет), либо заданы оба, и нижний не больше верхнего.
+        CheckConstraint(
+            "(portions_min IS NULL AND portions_max IS NULL)"
+            " OR (portions_min >= 1 AND portions_max >= portions_min)",
+            name="ck_product_portions_range",
+        ),
+        CheckConstraint("lead_time_days >= 0", name="ck_product_lead_time_non_negative"),
         Index("ix_product_active_available", "is_active", "is_available"),
         Index("ix_product_category_subcategory", "category_id", "subcategory_id"),
+        # GIN-индексы под фильтры по массивам: `occasions && [...]`, `dietary @> [...]`
+        Index("ix_product_occasions", "occasions", postgresql_using="gin"),
+        Index("ix_product_dietary", "dietary", postgresql_using="gin"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -78,20 +101,33 @@ class Product(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     composition: Mapped[str] = mapped_column(Text, nullable=False)
-    weight: Mapped[str] = mapped_column(String(50), nullable=False)
-    portions: Mapped[str | None] = mapped_column(String(50))
+    # Вес и порции — числа, а не свободный текст: «хватит ли на 10 детей» —
+    # первый вопрос покупателя, и по нему работает фильтр каталога. Строку
+    # «1200 г · 10–12 порций» собирает фронтенд.
+    weight_grams: Mapped[int] = mapped_column(Integer, nullable=False)
+    portions_min: Mapped[int | None] = mapped_column(Integer)
+    portions_max: Mapped[int | None] = mapped_column(Integer)
+    # КБЖУ на 100 г. Необязательно: у части позиций расчёта может не быть,
+    # и лучше не показать блок, чем показать выдуманные цифры.
+    kcal: Mapped[Decimal | None] = mapped_column(Numeric(6, 1))
+    proteins: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
+    fats: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
+    carbs: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
     shelf_life: Mapped[str | None] = mapped_column(String(100))
     storage_conditions: Mapped[str | None] = mapped_column(Text)
+    # «Перевозка: до 3 часов» — сколько позиция переживёт в дороге
+    transport_time: Mapped[str | None] = mapped_column(String(100))
+    # Срок изготовления в днях. 0 — «в наличии сегодня», больше 0 — «на заказ».
+    # По нему работает фильтр «Срок» и проверка желаемой даты в заказе.
+    lead_time_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     tags: Mapped[list[ProductTag]] = mapped_column(
-        ARRAY(
-            SAEnum(
-                ProductTag,
-                name="product_tag",
-                values_callable=lambda e: [i.value for i in e],
-            )
-        ),
-        default=list,
-        nullable=False,
+        _enum_array(ProductTag, "product_tag"), default=list, nullable=False
+    )
+    occasions: Mapped[list[Occasion]] = mapped_column(
+        _enum_array(Occasion, "occasion"), default=list, server_default="{}", nullable=False
+    )
+    dietary: Mapped[list[DietaryTag]] = mapped_column(
+        _enum_array(DietaryTag, "dietary_tag"), default=list, server_default="{}", nullable=False
     )
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -101,6 +137,7 @@ class Product(Base, TimestampMixin):
     images: Mapped[list["ProductImage"]] = relationship(
         back_populates="product", cascade="all, delete-orphan", order_by="ProductImage.order"
     )
+    reviews: Mapped[list["Review"]] = relationship(back_populates="product")
 
 
 class ProductImage(Base):

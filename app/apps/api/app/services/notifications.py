@@ -48,25 +48,31 @@ def _send(subject: str, body: str) -> None:
     logger.info("Отправлено уведомление «%s»", subject)
 
 
-def notify_new_order(order_number: str, total: str, phone: str, delivery: str) -> None:
+def notify_new_order(
+    order_number: str, total: str, phone: str, delivery: str, when: str | None = None
+) -> None:
     _send(
         subject=f"Новый заказ {order_number}",
         body=(
             f"Поступил новый заказ {order_number}.\n"
             f"Сумма: {total} ₽\n"
             f"Способ получения: {delivery}\n"
+            f"Когда: {when or 'не указано'}\n"
             f"Телефон клиента: {phone}\n\n"
             f"Детали — в админ-панели, раздел «Заказы»."
         ),
     )
 
 
-def notify_new_request(request_id: int, source: str, phone: str) -> None:
+def notify_new_request(
+    request_id: int, source: str, phone: str, details: str | None = None
+) -> None:
     _send(
         subject=f"Новая заявка #{request_id}",
         body=(
             f"Поступила новая заявка #{request_id} (источник: {source}).\n"
-            f"Телефон клиента: {phone}\n\n"
+            + (f"Событие: {details}\n" if details else "")
+            + f"Телефон клиента: {phone}\n\n"
             f"Детали — в админ-панели, раздел «Заявки»."
         ),
     )

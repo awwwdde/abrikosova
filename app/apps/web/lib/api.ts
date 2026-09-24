@@ -5,6 +5,8 @@
  * в старом проекте логика запросов дублировалась инлайново в каждом шаблоне.
  */
 
+import type { components } from "./api-schema";
+
 /** Адрес API для браузера: должен быть доступен снаружи (публичный хост). */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -16,134 +18,79 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
  */
 const SERVER_API_URL = process.env.API_URL ?? API_URL;
 
-export type Page<T> = {
-  items: T[];
-  total: number;
-  page: number;
-  page_size: number;
-};
+/**
+ * Схемы API — из сгенерированного lib/api-schema.d.ts (`npm run gen:api`).
+ *
+ * Здесь только короткие имена: руками типы ответов не пишем, иначе они снова
+ * разойдутся с Pydantic-схемами бэкенда и TypeScript этого не заметит.
+ */
+type Schemas = components["schemas"];
 
-export type SubCategory = {
-  id: number;
-  name: string;
-  slug: string;
-  order: number;
-  applies_fillings: boolean;
-};
+/**
+ * Страница списка. В OpenAPI generic `Page[T]` разворачивается в отдельные
+ * схемы `Page_ProductListItem_`, `Page_ReviewOut_` и т. д. с одинаковыми полями
+ * пагинации — берём их у любой и подставляем тип элементов.
+ */
+export type Page<T> = Omit<Schemas["Page_ProductListItem_"], "items"> & { items: T[] };
 
-export type Category = {
-  id: number;
-  name: string;
-  slug: string;
-  order: number;
-  subcategories: SubCategory[];
-};
+// Перечисления — строковые union-типы из схемы
+export type ProductTag = Schemas["ProductTag"];
+export type Occasion = Schemas["Occasion"];
+export type DietaryTag = Schemas["DietaryTag"];
+export type PortionsRange = Schemas["PortionsRange"];
+export type Availability = Schemas["Availability"];
+export type DeliveryMethod = Schemas["DeliveryMethod"];
+export type DeliveryInterval = Schemas["DeliveryInterval"];
+export type OrderStatus = Schemas["OrderStatus"];
+export type ConsultationStatus = Schemas["ConsultationStatus"];
+export type ConsultationSource = Schemas["ConsultationSource"];
 
-export type ProductTag = "new" | "hit" | "season";
+// Публичная часть
+export type SubCategory = Schemas["SubCategoryOut"];
+export type Category = Schemas["CategoryOut"];
+export type ProductListItem = Schemas["ProductListItem"];
+/** Отдельная схема, а не расширение ProductListItem: набор полей на бэкенде разный. */
+export type ProductDetail = Schemas["ProductDetail"];
+export type Nutrition = Schemas["Nutrition"];
+export type Filling = Schemas["FillingOut"];
+export type CartItem = Schemas["CartItemOut"];
+export type Cart = Schemas["CartOut"];
+export type Review = Schemas["ReviewOut"];
+export type GalleryItem = Schemas["GalleryItemOut"];
+export type PageContent = Schemas["PageContentOut"];
+export type OrderItem = Schemas["OrderItemOut"];
+export type Order = Schemas["OrderOut"];
+export type OrderCreate = Schemas["OrderCreate"];
+export type CatalogFilters = Schemas["CatalogFilters"];
+/** Вариант фильтра каталога: значение для запроса и подпись для интерфейса. */
+export type FilterOption<T extends string> = { value: T; label: string };
 
-export type ProductListItem = {
-  id: number;
-  name: string;
-  slug: string;
-  price: string;
-  is_available: boolean;
-  tags: ProductTag[];
-  weight: string;
-  main_image: string | null;
-};
-
-export type Filling = {
-  id: number;
-  name: string;
-  description: string;
-  image_key: string;
-  price_per_kg: string;
-};
-
-export type ProductDetail = ProductListItem & {
-  description: string;
-  composition: string;
-  portions: string | null;
-  shelf_life: string | null;
-  storage_conditions: string | null;
-  category: { name: string; slug: string };
-  subcategory: { name: string; slug: string; applies_fillings: boolean };
-  images: { id: number; storage_key: string; is_main: boolean; order: number }[];
-  related_products: ProductListItem[];
-  fillings: Filling[];
-};
-
-export type CartItem = {
-  product_id: number;
-  name: string;
-  slug: string;
-  price: string;
-  quantity: number;
-  line_total: string;
-  main_image: string | null;
-  is_available: boolean;
-};
-
-export type Cart = {
-  items: CartItem[];
-  total_items: number;
-  total_price: string;
-};
-
-export type Review = {
-  id: number;
-  author_name: string;
-  text: string;
-  image_key: string | null;
-  rating: number | null;
-  created_at: string;
-};
-
-export type GalleryItem = {
-  id: number;
-  image_key: string;
-  caption: string;
-  description: string | null;
-};
-
-export type PageContent = {
-  page_key: string;
-  content: Record<string, unknown>;
-  address: string | null;
-  phone: string | null;
-  work_hours_weekdays: string | null;
-  work_hours_weekend: string | null;
-  delivery_hours: string | null;
-  map_embed_code: string | null;
-};
-
-export type OrderItem = {
-  product_id: number;
-  name: string;
-  quantity: number;
-  price: string;
-  line_total: string;
-};
-
-export type Order = {
-  order_number: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_comment: string | null;
-  delivery_method: "pickup" | "delivery";
-  delivery_address: string | null;
-  desired_date: string | null;
-  total_price: string;
-  status: string;
-  created_at: string;
-  items: OrderItem[];
-};
+// Админка
+export type ProductAdmin = Schemas["ProductAdminOut"];
+export type ProductIn = Schemas["ProductIn"];
+export type ConsultationAdmin = Schemas["ConsultationAdminOut"];
+export type OrderAdminListItem = Schemas["OrderAdminListItem"];
+export type CategoryAdmin = Schemas["CategoryAdminOut"];
+export type SubCategoryAdmin = Schemas["SubCategoryAdminOut"];
+export type ProductImage = Schemas["ProductImageOut"];
+export type CustomCakeAdmin = Schemas["CustomCakeAdminOut"];
+export type FillingAdmin = Schemas["FillingAdminOut"];
+export type GalleryItemAdmin = Schemas["GalleryItemAdminOut"];
+export type ReviewAdmin = Schemas["ReviewAdminOut"];
+export type AdminUser = Schemas["AdminOut"];
+export type Backup = Schemas["BackupOut"];
 
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
     public fieldErrors?: Record<string, string>,
+    /**
+     * Структурированная ошибка целиком, если бэкенд прислал `detail` объектом.
+     * Например, `POST /orders` при слишком ранней дате: `{ message, earliest_date }` —
+     * чекаут достаёт отсюда дату и подсказывает, какую можно выбрать.
+     */
+    public data?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -151,7 +98,13 @@ export class ApiError extends Error {
 
 type ValidationDetail = { loc: (string | number)[]; msg: string };
 
-/** Разбирает 422 от FastAPI в понятную форму для React Hook Form. */
+/**
+ * Разбирает ошибку FastAPI в понятную форму для формы.
+ *
+ * `detail` бывает трёх видов: строка (свои HTTPException), список (422 валидации
+ * Pydantic с путями к полям) и объект с `message` (ошибки с дополнительными
+ * данными, как ранняя дата заказа).
+ */
 function parseError(status: number, body: unknown): ApiError {
   const detail = (body as { detail?: unknown })?.detail;
 
@@ -162,6 +115,12 @@ function parseError(status: number, body: unknown): ApiError {
       fieldErrors[field] = item.msg.replace(/^Value error, /, "");
     }
     return new ApiError(status, Object.values(fieldErrors)[0] ?? "Ошибка валидации", fieldErrors);
+  }
+
+  if (detail && typeof detail === "object") {
+    const data = detail as Record<string, unknown>;
+    const message = typeof data.message === "string" ? data.message : "Не удалось выполнить запрос";
+    return new ApiError(status, message, undefined, data);
   }
 
   return new ApiError(status, typeof detail === "string" ? detail : "Не удалось выполнить запрос");

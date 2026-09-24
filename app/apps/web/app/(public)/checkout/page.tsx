@@ -15,7 +15,8 @@ import {
   Price,
   Textarea,
 } from "@/components/ui";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, type OrderCreate } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 
 type FormState = {
   customer_name: string;
@@ -58,6 +59,16 @@ export default function CheckoutPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Самая ранняя дата считается сервером: срок изготовления самой долгой позиции
+  // от сегодняшнего дня по Москве. Клиент её не пересчитывает, а только подсказывает.
+  const earliestDate = cart?.earliest_date ?? "";
+  // Позицию под заказ без даты бэкенд не примет — просим дату сразу
+  const dateRequired = cart?.items.some((item) => item.lead_time_days > 0) ?? false;
+
+  function earlyDateMessage(date: string): string {
+    return `Выберите дату не раньше ${formatDate(date)}`;
+  }
+
   /** Клиентская проверка — для быстрой обратной связи; сервер валидирует всё заново. */
   function validate(): boolean {
     const next: Record<string, string> = {};
@@ -66,6 +77,10 @@ export default function CheckoutPage() {
       next.customer_phone = "Укажите телефон в формате +7 900 000-00-00";
     if (form.delivery_method === "delivery" && !form.delivery_address.trim())
       next.delivery_address = "При доставке адрес обязателен";
+    if (dateRequired && !form.desired_date) next.desired_date = earlyDateMessage(earliestDate);
+    // Строки YYYY-MM-DD сравниваются лексикографически так же, как даты
+    else if (form.desired_date && earliestDate && form.desired_date < earliestDate)
+      next.desired_date = earlyDateMessage(earliestDate);
     if (!form.consent_pd) next.consent_pd = "Без согласия заказ оформить нельзя";
 
     setErrors(next);
@@ -79,7 +94,7 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     try {
-      const payload = {
+      const payload: OrderCreate = {
         customer_name: form.customer_name.trim(),
         customer_phone: form.customer_phone.trim(),
         delivery_method: form.delivery_method,
@@ -96,7 +111,12 @@ export default function CheckoutPage() {
       await refresh();
       router.push(`/order/${result.order_number}`);
     } catch (error) {
-      if (error instanceof ApiError && error.fieldErrors) {
+      const serverEarliest = error instanceof ApiError ? error.data?.earliest_date : undefined;
+      if (typeof serverEarliest === "string") {
+        // Сервер знает дату точнее: корзина могла открыться вчера, а сейчас уже новый день
+        setErrors({ desired_date: earlyDateMessage(serverEarliest) });
+        setCommonError(error instanceof ApiError ? error.message : null);
+      } else if (error instanceof ApiError && error.fieldErrors) {
         setErrors(error.fieldErrors);
         setCommonError(error.message);
       } else {
@@ -216,9 +236,14 @@ export default function CheckoutPage() {
           <fieldset className="space-y-5">
             <legend className="eyebrow mb-4">Детали заказа</legend>
 
-            <Field label="Желаемая дата получения" error={errors.desired_date}>
+            <Field
+              label="Желаемая дата получения"
+              required={dateRequired}
+              error={errors.desired_date}
+            >
               <Input
                 type="date"
+                min={earliestDate || undefined}
                 value={form.desired_date}
                 onChange={(e) => update("desired_date", e.target.value)}
               />

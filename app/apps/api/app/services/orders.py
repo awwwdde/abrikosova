@@ -2,16 +2,18 @@
 
 import logging
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.clock import local_today
 from app.core.config import get_settings
 from app.models import Cart, Order, OrderItem, Product
 from app.schemas.shop import OrderCreate, OrderItemOut, OrderOut
+from app.services.cart import earliest_date
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,16 @@ PRIVACY_POLICY_VERSION = "1.0"
 
 class EmptyCartError(Exception):
     """Заказ из пустой корзины оформить нельзя."""
+
+
+class DateTooEarlyError(Exception):
+    """Желаемая дата раньше, чем позиции успеют приготовить."""
+
+    def __init__(self, earliest: date) -> None:
+        self.earliest = earliest
+        super().__init__(
+            f"В заказе есть позиции под заказ — самая ранняя дата получения {earliest:%d.%m.%Y}"
+        )
 
 
 class UnavailableProductError(Exception):
@@ -36,8 +48,11 @@ def _generate_order_number() -> str:
     Случайная часть, а не сквозной счётчик: по номеру заказа страница
     подтверждения доступна без авторизации, и последовательные номера позволяли
     бы перебором читать чужие заказы с их персональными данными.
+
+    Дата — день кондитерской, а не UTC: заказ, оформленный в половине первого
+    ночи по Москве, иначе получал бы в номере вчерашнее число.
     """
-    return f"{datetime.now(UTC):%Y%m%d}-{secrets.token_hex(3).upper()}"
+    return f"{local_today():%Y%m%d}-{secrets.token_hex(3).upper()}"
 
 
 async def create_order(session: AsyncSession, cart: Cart, data: OrderCreate) -> Order:
@@ -55,6 +70,20 @@ async def create_order(session: AsyncSession, cart: Cart, data: OrderCreate) -> 
     ]
     if unavailable:
         raise UnavailableProductError(unavailable)
+
+    # Срок изготовления — обещание покупателю («готовим за три дня»), и заказ,
+    # который физически нельзя выполнить к названной дате, принимать нельзя.
+    # Если в корзине есть позиция под заказ, дата обязательна: без неё кухня
+    # не знает, к какому дню печь.
+    lead_times = [
+        products[i.product_id].lead_time_days for i in cart.items if i.product_id in products
+    ]
+    earliest = earliest_date(lead_times)
+    needs_date = max(lead_times, default=0) > 0
+    if (needs_date and data.desired_date is None) or (
+        data.desired_date is not None and data.desired_date < earliest
+    ):
+        raise DateTooEarlyError(earliest)
 
     order_items: list[OrderItem] = []
     total = Decimal("0")
@@ -80,6 +109,7 @@ async def create_order(session: AsyncSession, cart: Cart, data: OrderCreate) -> 
         delivery_method=data.delivery_method,
         delivery_address=(data.delivery_address or "").strip() or None,
         desired_date=data.desired_date,
+        delivery_interval=data.delivery_interval,
         consent_pd=data.consent_pd,
         consent_at=datetime.now(UTC),
         consent_policy_version=PRIVACY_POLICY_VERSION,
@@ -120,6 +150,7 @@ async def build_order_view(session: AsyncSession, order: Order) -> OrderOut:
         delivery_method=order.delivery_method,
         delivery_address=order.delivery_address,
         desired_date=order.desired_date,
+        delivery_interval=order.delivery_interval,
         total_price=order.total_price,
         status=order.status,
         created_at=order.created_at,

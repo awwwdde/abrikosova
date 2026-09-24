@@ -7,7 +7,9 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-engine = create_async_engine(settings.database_url, echo=settings.debug, pool_pre_ping=True)
+# echo не используется: он вешает собственный обработчик SQLAlchemy, и каждая запись
+# выходила в лог дважды. Поток SQL включается через SQL_ECHO в setup_logging.
+engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

@@ -17,6 +17,7 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     UploadFile,
     status,
 )
@@ -91,6 +92,36 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 def _drop_cache(background: BackgroundTasks, product_slug: str | None = None) -> None:
     """Ставит сброс кэша публичных страниц в фон — ответ админке его не ждёт."""
     background.add_task(revalidate.revalidate_paths, revalidate.catalog_paths(product_slug))
+
+
+def _drop_paths(background: BackgroundTasks, *paths: str) -> None:
+    """То же для разделов вне каталога: галерея, отзывы, торты на заказ."""
+    background.add_task(revalidate.revalidate_paths, list(paths))
+
+
+async def _check_product_refs(session: AsyncSession, data: ProductIn) -> None:
+    """Подкатегория должна принадлежать выбранной категории.
+
+    Две независимые ссылки в товаре (category_id и subcategory_id) позволяют
+    сохранить «Торты › Печенье» — товар тогда пропадёт из обоих разделов
+    каталога и из хлебных крошек. База этого не ловит, поэтому проверяем здесь.
+    """
+    subcategory = await session.get(SubCategory, data.subcategory_id)
+    if subcategory is None or subcategory.category_id != data.category_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Подкатегория не относится к выбранной категории",
+        )
+
+
+async def _product_slug(session: AsyncSession, product_id: int | None) -> str | None:
+    """Slug товара для сброса кэша его страницы; заодно проверяет, что товар есть."""
+    if product_id is None:
+        return None
+    slug = await session.scalar(select(Product.slug).where(Product.id == product_id))
+    if slug is None:
+        raise HTTPException(status_code=422, detail="Товар для отзыва не найден")
+    return slug
 
 
 async def _get_or_404(session: AsyncSession, model: Any, item_id: int) -> Any:
@@ -288,6 +319,7 @@ async def create_product(
     request: Request,
     background: BackgroundTasks,
 ):
+    await _check_product_refs(session, data)
     product = Product(**data.model_dump())
     session.add(product)
     await session.flush()
@@ -309,6 +341,8 @@ async def update_product(
     background: BackgroundTasks,
 ):
     product = await _get_or_404(session, Product, item_id)
+    await _check_product_refs(session, data)
+    old_slug = product.slug
     for field, value in data.model_dump().items():
         setattr(product, field, value)
     await audit.record(
@@ -326,6 +360,9 @@ async def update_product(
     # синхронно и упадёт в async-сессии
     await session.refresh(product)
     _drop_cache(background, product.slug)
+    if old_slug != product.slug:
+        # Старый адрес тоже закэширован — без сброса он продолжит отдавать товар
+        _drop_cache(background, old_slug)
     return product
 
 
@@ -495,7 +532,11 @@ async def list_custom_cakes(admin: CurrentAdmin, session: SessionDep):
     "/custom-cakes", response_model=CustomCakeAdminOut, status_code=status.HTTP_201_CREATED
 )
 async def create_custom_cake(
-    data: CustomCakeIn, admin: CurrentAdmin, session: SessionDep, request: Request
+    data: CustomCakeIn,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ):
     cake = CustomCake(**data.model_dump())
     session.add(cake)
@@ -504,12 +545,18 @@ async def create_custom_cake(
         session, request, admin, action="create", entity="custom_cake", entity_id=cake.id
     )
     await session.commit()
+    _drop_paths(background, "/", "/custom-cakes")
     return cake
 
 
 @router.put("/custom-cakes/{item_id}", response_model=CustomCakeAdminOut)
 async def update_custom_cake(
-    item_id: int, data: CustomCakeIn, admin: CurrentAdmin, session: SessionDep, request: Request
+    item_id: int,
+    data: CustomCakeIn,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ):
     cake = await _get_or_404(session, CustomCake, item_id)
     for field, value in data.model_dump().items():
@@ -518,12 +565,17 @@ async def update_custom_cake(
         session, request, admin, action="update", entity="custom_cake", entity_id=item_id
     )
     await session.commit()
+    _drop_paths(background, "/", "/custom-cakes")
     return cake
 
 
 @router.delete("/custom-cakes/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_custom_cake(
-    item_id: int, admin: CurrentAdmin, session: SessionDep, request: Request
+    item_id: int,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ) -> None:
     cake = await _get_or_404(session, CustomCake, item_id)
     await session.delete(cake)
@@ -531,6 +583,7 @@ async def delete_custom_cake(
         session, request, admin, action="delete", entity="custom_cake", entity_id=item_id
     )
     await session.commit()
+    _drop_paths(background, "/", "/custom-cakes")
 
 
 @router.get("/fillings", response_model=list[FillingAdminOut])
@@ -540,7 +593,11 @@ async def list_fillings(admin: CurrentAdmin, session: SessionDep):
 
 @router.post("/fillings", response_model=FillingAdminOut, status_code=status.HTTP_201_CREATED)
 async def create_filling(
-    data: FillingIn, admin: CurrentAdmin, session: SessionDep, request: Request
+    data: FillingIn,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ):
     filling = Filling(**data.model_dump())
     session.add(filling)
@@ -549,12 +606,18 @@ async def create_filling(
         session, request, admin, action="create", entity="filling", entity_id=filling.id
     )
     await session.commit()
+    _drop_paths(background, "/", "/custom-cakes")
     return filling
 
 
 @router.put("/fillings/{item_id}", response_model=FillingAdminOut)
 async def update_filling(
-    item_id: int, data: FillingIn, admin: CurrentAdmin, session: SessionDep, request: Request
+    item_id: int,
+    data: FillingIn,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ):
     filling = await _get_or_404(session, Filling, item_id)
     for field, value in data.model_dump().items():
@@ -563,12 +626,17 @@ async def update_filling(
         session, request, admin, action="update", entity="filling", entity_id=item_id
     )
     await session.commit()
+    _drop_paths(background, "/", "/custom-cakes")
     return filling
 
 
 @router.delete("/fillings/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_filling(
-    item_id: int, admin: CurrentAdmin, session: SessionDep, request: Request
+    item_id: int,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ) -> None:
     filling = await _get_or_404(session, Filling, item_id)
     await session.delete(filling)
@@ -576,6 +644,7 @@ async def delete_filling(
         session, request, admin, action="delete", entity="filling", entity_id=item_id
     )
     await session.commit()
+    _drop_paths(background, "/", "/custom-cakes")
 
 
 @router.get("/gallery", response_model=list[GalleryItemAdminOut])
@@ -585,7 +654,11 @@ async def list_gallery_admin(admin: CurrentAdmin, session: SessionDep):
 
 @router.post("/gallery", response_model=GalleryItemAdminOut, status_code=status.HTTP_201_CREATED)
 async def create_gallery_item(
-    data: GalleryItemIn, admin: CurrentAdmin, session: SessionDep, request: Request
+    data: GalleryItemIn,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ):
     item = GalleryItem(**data.model_dump())
     session.add(item)
@@ -594,12 +667,18 @@ async def create_gallery_item(
         session, request, admin, action="create", entity="gallery_item", entity_id=item.id
     )
     await session.commit()
+    _drop_paths(background, "/", "/gallery")
     return item
 
 
 @router.put("/gallery/{item_id}", response_model=GalleryItemAdminOut)
 async def update_gallery_item(
-    item_id: int, data: GalleryItemIn, admin: CurrentAdmin, session: SessionDep, request: Request
+    item_id: int,
+    data: GalleryItemIn,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ):
     item = await _get_or_404(session, GalleryItem, item_id)
     for field, value in data.model_dump().items():
@@ -608,12 +687,17 @@ async def update_gallery_item(
         session, request, admin, action="update", entity="gallery_item", entity_id=item_id
     )
     await session.commit()
+    _drop_paths(background, "/", "/gallery")
     return item
 
 
 @router.delete("/gallery/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_gallery_item(
-    item_id: int, admin: CurrentAdmin, session: SessionDep, request: Request
+    item_id: int,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ) -> None:
     item = await _get_or_404(session, GalleryItem, item_id)
     await session.delete(item)
@@ -621,19 +705,37 @@ async def delete_gallery_item(
         session, request, admin, action="delete", entity="gallery_item", entity_id=item_id
     )
     await session.commit()
+    _drop_paths(background, "/", "/gallery")
 
 
 # --- Отзывы: модерация ---
 
 
+def _review_paths(*product_slugs: str | None) -> list[str]:
+    """Отзывы показываются на главной и в карточках своих товаров."""
+    return ["/", *(f"/product/{slug}" for slug in product_slugs if slug)]
+
+
 @router.get("/reviews", response_model=list[ReviewAdminOut])
-async def list_reviews_admin(admin: CurrentAdmin, session: SessionDep):
-    """Все отзывы, включая неопубликованные."""
-    return list((await session.scalars(select(Review).order_by(Review.created_at.desc()))).all())
+async def list_reviews_admin(
+    admin: CurrentAdmin, session: SessionDep, product_id: int | None = None
+):
+    """Все отзывы, включая неопубликованные. Можно сузить до одного товара."""
+    query = select(Review).order_by(Review.created_at.desc())
+    if product_id is not None:
+        query = query.where(Review.product_id == product_id)
+    return list((await session.scalars(query)).all())
 
 
 @router.post("/reviews", response_model=ReviewAdminOut, status_code=status.HTTP_201_CREATED)
-async def create_review(data: ReviewIn, admin: CurrentAdmin, session: SessionDep, request: Request):
+async def create_review(
+    data: ReviewIn,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
+):
+    slug = await _product_slug(session, data.product_id)
     review = Review(**data.model_dump())
     session.add(review)
     await session.flush()
@@ -641,15 +743,28 @@ async def create_review(data: ReviewIn, admin: CurrentAdmin, session: SessionDep
         session, request, admin, action="create", entity="review", entity_id=review.id
     )
     await session.commit()
+    _drop_paths(background, *_review_paths(slug))
     return review
 
 
 @router.patch("/reviews/{review_id}", response_model=ReviewAdminOut)
 async def update_review(
-    review_id: int, data: ReviewUpdate, admin: CurrentAdmin, session: SessionDep, request: Request
+    review_id: int,
+    data: ReviewUpdate,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ):
     review = await _get_or_404(session, Review, review_id)
     changes = data.model_dump(exclude_unset=True)
+
+    # Отзыв могли перенести с одного товара на другой — сбрасываем обе карточки
+    old_slug = await _product_slug(session, review.product_id)
+    new_slug = (
+        await _product_slug(session, changes["product_id"]) if "product_id" in changes else None
+    )
+
     for field, value in changes.items():
         setattr(review, field, value)
     await audit.record(
@@ -662,19 +777,26 @@ async def update_review(
         details={"fields": list(changes.keys())},
     )
     await session.commit()
+    _drop_paths(background, *_review_paths(old_slug, new_slug))
     return review
 
 
 @router.delete("/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_review(
-    review_id: int, admin: CurrentAdmin, session: SessionDep, request: Request
+    review_id: int,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    request: Request,
+    background: BackgroundTasks,
 ) -> None:
     review = await _get_or_404(session, Review, review_id)
+    slug = await _product_slug(session, review.product_id)
     await session.delete(review)
     await audit.record(
         session, request, admin, action="delete", entity="review", entity_id=review_id
     )
     await session.commit()
+    _drop_paths(background, *_review_paths(slug))
 
 
 # --- Контент страниц ---
@@ -823,6 +945,43 @@ async def update_consultation(
     )
     await session.commit()
     return row
+
+
+@router.get(
+    "/consultations/{request_id}/reference",
+    response_class=Response,
+    responses={200: {"content": {"image/webp": {}}}},
+)
+async def get_consultation_reference(
+    request_id: int, admin: CurrentAdmin, session: SessionDep, request: Request
+) -> Response:
+    """Фото-референс из заявки. Отдаётся только через админку, не по публичной ссылке.
+
+    Просмотр пишется в журнал: это персональные данные клиента, и по 152-ФЗ
+    оператор должен понимать, кто и когда к ним обращался.
+    """
+    row = await _get_or_404(session, ConsultationRequest, request_id)
+    if row.reference_image_key is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Референса нет")
+
+    content = await storage.read_object(row.reference_image_key)
+    if content is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+
+    await audit.record(
+        session,
+        request,
+        admin,
+        action="view_reference",
+        entity="consultation",
+        entity_id=request_id,
+    )
+    await session.commit()
+    return Response(
+        content=content,
+        media_type="image/webp",
+        headers={"Cache-Control": "private, no-store"},
+    )
 
 
 # --- Пользователи: только владелец ---

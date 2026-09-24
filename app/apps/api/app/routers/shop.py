@@ -5,10 +5,19 @@
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Query, Response
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Cookie,
+    Depends,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+)
 from fastapi import status as http_status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,16 +32,20 @@ from app.models import (
     DeliveryMethod,
     Filling,
     GalleryItem,
+    Occasion,
+    Order,
     PageContent,
     PageKey,
+    Product,
     Review,
 )
+from app.schemas.catalog import OCCASION_LABELS
 from app.schemas.common import Page
 from app.schemas.shop import (
     CartItemIn,
     CartItemQuantityIn,
     CartOut,
-    ConsultationCreate,
+    ConsultationForm,
     CustomCakesPageOut,
     FeedbackCreate,
     GalleryItemOut,
@@ -44,8 +57,9 @@ from app.schemas.shop import (
     ReviewOut,
 )
 from app.services import cart as cart_service
-from app.services import notifications, telegram
+from app.services import notifications, storage, telegram
 from app.services import orders as order_service
+from app.services.catalog import published_reviews
 from app.services.orders import PRIVACY_POLICY_VERSION
 
 logger = logging.getLogger(__name__)
@@ -90,6 +104,27 @@ def _parse_cart_id(raw: str | None) -> uuid.UUID | None:
         return None
 
 
+def _request_details(row: ConsultationRequest) -> str | None:
+    """Строка «Свадьба · 12.12.2026 · гостей: 45 · есть фото-референс» для уведомления."""
+    parts = [
+        OCCASION_LABELS[row.occasion] if row.occasion else None,
+        f"{row.event_date:%d.%m.%Y}" if row.event_date else None,
+        f"гостей: {row.guests_count}" if row.guests_count else None,
+        "есть фото-референс" if row.reference_image_key else None,
+    ]
+    return " · ".join(p for p in parts if p) or None
+
+
+def _order_when(order: Order) -> str | None:
+    """«27.09.2026, 12–15» — дата и интервал получения для уведомления."""
+    if order.desired_date is None:
+        return None
+    when = f"{order.desired_date:%d.%m.%Y}"
+    if order.delivery_interval is not None:
+        when += f", {order.delivery_interval.value.replace('-', '–')}"
+    return when
+
+
 # --- Торты на заказ ---
 
 
@@ -129,11 +164,19 @@ async def _create_request(
     description: str | None,
     source: ConsultationSource,
     consent_pd: bool,
+    occasion: Occasion | None = None,
+    event_date: date | None = None,
+    guests_count: int | None = None,
+    reference_image_key: str | None = None,
 ) -> ConsultationRequest:
     request_row = ConsultationRequest(
         name=name.strip(),
         phone=phone.strip(),
         description=(description or "").strip() or None,
+        occasion=occasion,
+        event_date=event_date,
+        guests_count=guests_count,
+        reference_image_key=reference_image_key,
         consent_pd=consent_pd,
         consent_at=datetime.now(UTC),
         consent_policy_version=PRIVACY_POLICY_VERSION,
@@ -143,9 +186,12 @@ async def _create_request(
     await session.flush()
     await session.commit()
 
-    background.add_task(notifications.notify_new_request, request_row.id, source.value, phone)
+    details = _request_details(request_row)
     background.add_task(
-        telegram.notify_new_request, request_row.id, source.value, phone, request_row.name
+        notifications.notify_new_request, request_row.id, source.value, phone, details
+    )
+    background.add_task(
+        telegram.notify_new_request, request_row.id, source.value, phone, request_row.name, details
     )
     logger.info("Создана заявка #%s (источник %s)", request_row.id, source.value)
     return request_row
@@ -158,10 +204,25 @@ async def _create_request(
     dependencies=[Depends(limit_forms)],
 )
 async def create_consultation(
-    data: ConsultationCreate,
+    # media_type явно: файл объявлен внутри модели, и без подсказки FastAPI
+    # описал бы в OpenAPI urlencoded-форму — сгенерированный по схеме клиент
+    # тогда молча терял бы фото
+    data: Annotated[ConsultationForm, Form(media_type="multipart/form-data")],
     session: SessionDep,
     background: BackgroundTasks,
 ) -> RequestAccepted:
+    """Заявка на торт под событие. multipart/form-data: поля формы + необязательное фото.
+
+    Порядок важен: сначала FastAPI валидирует поля (согласие, телефон, даты),
+    и только потом файл уходит в хранилище — чтобы заведомо отклонённая заявка
+    не оставляла после себя загруженных картинок.
+    """
+    reference_key = None
+    if data.reference is not None and data.reference.filename:
+        reference_key = await storage.upload_image(
+            data.reference, prefix=storage.PRIVATE_REFERENCES_PREFIX
+        )
+
     row = await _create_request(
         session,
         background,
@@ -170,6 +231,10 @@ async def create_consultation(
         description=data.description,
         source=ConsultationSource.CUSTOM_CAKE,
         consent_pd=data.consent_pd,
+        occasion=data.occasion,
+        event_date=data.event_date,
+        guests_count=data.guests_count,
+        reference_image_key=reference_key,
     )
     return RequestAccepted(id=row.id)
 
@@ -206,10 +271,15 @@ async def create_feedback(
 @content_router.get("/gallery", response_model=Page[GalleryItemOut])
 async def list_gallery(
     session: SessionDep,
+    occasion: Occasion | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=60)] = 12,
 ) -> Page[GalleryItemOut]:
+    """Примеры работ с фильтром по поводу — отдельная страница вместо портфолио
+    внутри товарного каталога, как было раньше (PDF «Этап 1», раздел 11)."""
     base = select(GalleryItem).where(GalleryItem.is_active.is_(True))
+    if occasion is not None:
+        base = base.where(GalleryItem.occasion == occasion)
     total = await session.scalar(select(func.count()).select_from(base.subquery())) or 0
     items = (
         await session.scalars(
@@ -224,15 +294,26 @@ async def list_gallery(
 @content_router.get("/reviews", response_model=Page[ReviewOut])
 async def list_reviews(
     session: SessionDep,
+    product: Annotated[str | None, Query(description="slug товара")] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=60)] = 12,
 ) -> Page[ReviewOut]:
-    """Только опубликованные отзывы — неопубликованные видны лишь в админке."""
-    base = select(Review).where(Review.is_published.is_(True))
+    """Только опубликованные отзывы — неопубликованные видны лишь в админке.
+
+    Без `product` — все отзывы (блок на главной), с `product` — отзывы о позиции
+    (продолжение блока 06 карточки товара, где первые отзывы приходят сразу).
+    """
+    base = published_reviews()
+    if product is not None:
+        base = base.join(Product, Review.product_id == Product.id).where(
+            Product.slug == product, Product.is_active.is_(True)
+        )
     total = await session.scalar(select(func.count()).select_from(base.subquery())) or 0
     items = (
         await session.scalars(
-            base.order_by(Review.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+            base.order_by(Review.created_at.desc(), Review.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
         )
     ).all()
     return Page(items=list(items), total=total, page=page, page_size=page_size)
@@ -359,6 +440,12 @@ async def create_order(
         ) from None
     except order_service.UnavailableProductError as exc:
         raise HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    except order_service.DateTooEarlyError as exc:
+        # 422, а не 409: исправить нужно поле формы, а не содержимое корзины
+        raise HTTPException(
+            status_code=422,
+            detail={"message": str(exc), "earliest_date": exc.earliest.isoformat()},
+        ) from None
 
     # Собираем представление до очистки корзины: в нём названия товаров,
     # которые нужны в тексте уведомления
@@ -367,12 +454,14 @@ async def create_order(
     await cart_service.clear(session, cart)
     await session.commit()
 
+    when = _order_when(order)
     background.add_task(
         notifications.notify_new_order,
         order.order_number,
         str(order.total_price),
         order.customer_phone,
         order.delivery_method.value,
+        when,
     )
     background.add_task(
         telegram.notify_new_order,
@@ -382,6 +471,7 @@ async def create_order(
         "Доставка" if order.delivery_method is DeliveryMethod.DELIVERY else "Самовывоз",
         order.customer_name,
         [(item.name, item.quantity, str(item.line_total)) for item in order_view.items],
+        when,
     )
     return OrderCreated(order_number=order.order_number)
 

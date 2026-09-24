@@ -48,6 +48,11 @@ ALLOWED_FORMATS: Final = {"JPEG", "PNG", "WEBP"}
 # (в первую очередь backups/ с дампами базы) остаётся закрытым.
 PUBLIC_PREFIXES: Final = ("products", "gallery", "fillings", "custom-cakes", "reviews")
 
+# Фото-референсы из заявок на торт. Их присылают частные лица, на снимке может
+# оказаться что угодно личное — поэтому префикс закрытый, в PUBLIC_PREFIXES его
+# нет, а админка получает файл через свой эндпоинт под авторизацией.
+PRIVATE_REFERENCES_PREFIX: Final = "references"
+
 
 class StorageNotConfiguredError(Exception):
     """Хранилище не настроено — загрузка невозможна."""
@@ -123,7 +128,13 @@ async def upload_image(file: UploadFile, prefix: str) -> str:
             Key=key,
             Body=webp,
             ContentType="image/webp",
-            CacheControl="public, max-age=31536000, immutable",
+            # Ключ случайный и не переиспользуется — публичные фото можно кэшировать
+            # навсегда. Закрытые не должны оседать в общих кэшах по дороге.
+            CacheControl=(
+                "public, max-age=31536000, immutable"
+                if prefix.startswith(PUBLIC_PREFIXES)
+                else "private, no-store"
+            ),
         )
     except StorageNotConfiguredError:
         logger.error("Загрузка изображения невозможна: не настроены параметры S3")
@@ -140,6 +151,33 @@ async def upload_image(file: UploadFile, prefix: str) -> str:
 
     logger.info("Загружено изображение %s (%s → %s байт)", key, len(raw), len(webp))
     return key
+
+
+async def read_object(key: str) -> bytes | None:
+    """Читает закрытый объект целиком. None — объекта нет или хранилище недоступно.
+
+    Используется для референсов из заявок: админка получает их через свой
+    эндпоинт под JWT, а не по подписанной ссылке. Подпись S3 включает хост,
+    а в разработке браузер и API видят MinIO по разным адресам — ссылка,
+    подписанная для `minio:9000`, в браузере бы не открылась. Заодно каждый
+    просмотр чужой фотографии проходит через проверку прав.
+    """
+    try:
+        client = await run_in_threadpool(_client)
+        response = await run_in_threadpool(
+            client.get_object, Bucket=get_settings().s3_bucket, Key=key
+        )
+        return await run_in_threadpool(response["Body"].read)
+    except StorageNotConfiguredError:
+        return None
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") in ("NoSuchKey", "404"):
+            return None
+        logger.exception("Не удалось прочитать объект %s", key)
+        return None
+    except BotoCoreError:
+        logger.exception("Не удалось прочитать объект %s", key)
+        return None
 
 
 async def delete_image(key: str) -> None:
