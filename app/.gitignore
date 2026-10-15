@@ -28,5 +28,9 @@ dist/
 .DS_Store
 Thumbs.db
 *.log
+e2e/.auth/
+e2e/.state/
+e2e/test-results/
+e2e/playwright-report/
 /media/
 /backups/

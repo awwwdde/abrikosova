@@ -9,12 +9,27 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging
-from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import (
+    RequestBodyLimitMiddleware,
+    RequestContextMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.core.redis import close_redis
 from app.core.scheduler import shutdown as stop_scheduler
 from app.core.scheduler import start as start_scheduler
-from app.routers import admin, auth, catalog, health, shop
-from app.services.storage import ensure_bucket
+from app.routers import (
+    admin,
+    admin_home,
+    admin_lists,
+    admin_owner,
+    auth,
+    catalog,
+    custom_cakes,
+    health,
+    media,
+    shop,
+)
+from app.services.storage import ensure_storage
 
 settings = get_settings()
 setup_logging(settings.debug, sql_echo=settings.sql_echo)
@@ -23,8 +38,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    # Локальный MinIO стартует пустым — заводим бакет, если его ещё нет
-    await ensure_bucket()
+    # Каталог лежит в постоянном томе, а не в слое контейнера
+    await ensure_storage()
     start_scheduler()
     yield
     stop_scheduler()
@@ -69,6 +84,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
     )
 
 
+app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
@@ -79,21 +95,32 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    # Idempotency-Key — защита «Отправить заказ» от двойного нажатия (007b)
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
+    # Имя файла CSV-отчёта (011b) — браузер отдаёт скрипту только перечисленные
+    # заголовки ответа с другого origin
+    expose_headers=["Content-Disposition"],
     max_age=600,
 )
 
 API_PREFIX = "/api/v1"
 
+app.include_router(media.router)
+
 for _router in (
     health.router,
     catalog.router,
-    shop.custom_cakes_router,
+    catalog.legacy_router,
+    custom_cakes.router,
+    custom_cakes.consultations_router,
     shop.content_router,
     shop.contacts_router,
     shop.cart_router,
     shop.orders_router,
     auth.router,
+    admin_lists.router,
     admin.router,
+    admin_home.router,
+    admin_owner.router,
 ):
     app.include_router(_router, prefix=API_PREFIX)

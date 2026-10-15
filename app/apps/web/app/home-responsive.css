@@ -1,0 +1,703 @@
+/*
+ * Три кадра home.png: 1194 / 834 / 390. Правила ограничены главной и
+ * ширинами ниже 1280: принятая раскладка 1512 остаётся в прежних компонентах.
+ * Измерения исходного PNG — tasks/015-screens/reference-rows.txt.
+ */
+@media (width < 1280px) {
+  .home-page {
+    --text-section: 2.75rem;
+    --text-subtitle: 1.125rem;
+    --text-item: 1.75rem;
+  }
+
+  .home-page .text-subtitle {
+    line-height: 28px;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:first-child {
+    min-width: 0;
+    flex: 1;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:last-child {
+    flex-shrink: 0;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:last-child {
+    grid-template-columns: 480px minmax(0, 1fr);
+    gap: 64px;
+    align-items: start;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:last-child > div:first-child {
+    width: 100%;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:last-child {
+    margin-left: 60px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:last-child > span:first-child {
+    font-size: 28px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button {
+    min-height: 88px;
+    padding-top: 22px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:first-child {
+    top: 34px;
+  }
+  .home-page [aria-labelledby="fillings-title"] ul + div {
+    padding: 24px 0 0 60px;
+    min-height: 101px;
+    gap: 16px;
+  }
+  .home-page [aria-labelledby="fillings-title"] ul + div p {
+    font-size: 16px;
+    line-height: 24px;
+    flex: 1;
+  }
+  .home-page [aria-labelledby="fillings-title"] ul + div a {
+    width: 188px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:first-child > p {
+    width: 470px;
+  }
+  .home-page [aria-labelledby="author-title"] > div {
+    grid-template-columns: 480px minmax(0, 1fr);
+    gap: 64px;
+  }
+  .home-page [aria-labelledby="author-title"] h2 {
+    font-size: 40px;
+  }
+  .home-page [aria-labelledby="author-title"] blockquote {
+    font-size: 30px;
+    line-height: 40px;
+  }
+  .home-page [aria-labelledby="author-title"] dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .home-page [aria-labelledby="bakery-title"] {
+    padding-top: 120px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:nth-child(2) {
+    height: 560px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:last-child {
+    margin-top: 64px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:last-child p {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .home-page [aria-labelledby="reviews-title"] dd {
+    font-size: 36px;
+  }
+  .home-page [aria-labelledby="reviews-title"] dl {
+    padding-block: 40px;
+  }
+  .home-page [aria-labelledby="reviews-title"] ul {
+    column-gap: 64px;
+  }
+  .home-page [aria-labelledby="reviews-title"] li:not(:first-child)::before {
+    left: -32px;
+  }
+  .home-page [aria-labelledby="reviews-title"] li > p:nth-of-type(1) {
+    line-clamp: 4;
+    -webkit-line-clamp: 4;
+  }
+  .home-page [aria-labelledby="faq-title"] {
+    padding-bottom: 128px;
+  }
+}
+
+@media (1280px <= width < 1512px) {
+  .home-page [aria-labelledby="author-title"] dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (1024px <= width < 1280px) {
+  .home-ready {
+    padding-bottom: 112px;
+  }
+  .home-page [aria-labelledby="fillings-title"] {
+    padding-top: 120px;
+    padding-bottom: 90px;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:nth-child(2) {
+    margin-top: 24px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:first-child > p {
+    width: 554px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol {
+    margin-top: 126px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:last-child:not(:first-child) {
+    height: 236px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] {
+    padding-bottom: 107px;
+  }
+  .home-page [aria-labelledby="author-title"] > div {
+    min-height: 1010px;
+    align-items: start;
+  }
+  .home-page [aria-labelledby="bakery-title"] {
+    padding-top: 112px;
+    padding-bottom: 105px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:nth-child(2) {
+    margin-top: 80.6px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:last-child {
+    margin-top: 72px;
+  }
+  .home-page [aria-labelledby="reviews-title"] ul {
+    margin-top: 80px;
+  }
+  .home-page [aria-labelledby="reviews-title"] li > p:nth-of-type(1) {
+    min-height: 140px;
+    line-height: 28px;
+    line-clamp: 5;
+    -webkit-line-clamp: 5;
+  }
+  .home-page [aria-labelledby="reviews-title"] {
+    padding-bottom: 99px;
+  }
+}
+
+@media (640px <= width < 1024px) {
+  .home-page {
+    --text-section: 2.75rem;
+    --text-subtitle: 1.125rem;
+  }
+  .home-page .text-subtitle {
+    font-weight: 400;
+  }
+  .home-page [aria-roledescription] .text-subtitle {
+    font-size: 18px;
+  }
+  .home-works [aria-roledescription] .text-subtitle {
+    font-size: 16px;
+  }
+  .home-ready {
+    padding-block: 96px 196px;
+  }
+  .home-works {
+    padding-bottom: 67px;
+  }
+  .home-page [aria-roledescription] > div:first-child {
+    margin-bottom: 56px;
+  }
+  .home-ready [aria-roledescription] > div:first-child {
+    margin-bottom: 42px;
+  }
+  .home-works [aria-roledescription] > div:first-child {
+    margin-bottom: 76px;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:first-child {
+    flex-basis: 100%;
+  }
+  .home-page [aria-roledescription] ul {
+    gap: 20px;
+  }
+  .home-ready [aria-roledescription] li:not([aria-hidden]) {
+    width: 336px;
+  }
+  .home-works [aria-roledescription] li:not([aria-hidden]) {
+    width: 440px;
+  }
+  .home-works article > div:first-child > div:first-child {
+    height: 570px;
+  }
+  .home-page [aria-labelledby="fillings-title"] {
+    padding-block: 96px 112px;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:last-child {
+    grid-template-columns: minmax(0, 344fr) minmax(0, 394fr);
+    gap: 32px;
+    margin-top: 44px;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:last-child > div:first-child {
+    aspect-ratio: 4 / 5;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:last-child {
+    margin-left: 60px;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:nth-child(2) {
+    margin-top: 22px;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:last-child > div:last-child {
+    display: contents;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:last-child > span:first-child {
+    font-size: 28px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button {
+    min-height: 100px;
+  }
+  .home-page [aria-labelledby="fillings-title"] ul + div {
+    grid-column: 1 / -1;
+    margin-left: 0;
+    padding: 32px 0 0;
+    flex-wrap: nowrap;
+  }
+  .home-page [aria-labelledby="event-cake-title"] {
+    padding-top: 116px;
+    padding-bottom: 91px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:first-child > p {
+    width: auto;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol {
+    margin-top: 112px;
+    gap: 64px 32px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol h3 {
+    margin-top: 40px;
+    font-size: 24px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:last-child:not(:first-child) {
+    margin-top: 64px;
+    padding: 40px 32px;
+  }
+  .home-page [aria-labelledby="author-title"] > div {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 96px;
+    gap: 40px;
+    min-height: 1448px;
+    align-content: start;
+  }
+  .home-page [aria-labelledby="author-title"] > div > div:first-child {
+    max-width: none;
+    aspect-ratio: 4 / 3;
+  }
+  .home-page [aria-labelledby="author-title"] h2 {
+    font-size: 32px;
+  }
+  .home-page [aria-labelledby="author-title"] img {
+    object-position: center 7.3%;
+  }
+  .home-page [aria-labelledby="fillings-title"] img {
+    object-fit: fill;
+  }
+  .home-page [aria-labelledby="author-title"] blockquote {
+    font-size: 28px;
+    line-height: 36px;
+  }
+  .home-page [aria-labelledby="author-title"] dl {
+    margin-top: 40px;
+  }
+  .home-page [aria-labelledby="bakery-title"] {
+    padding-block: 87px 191px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:nth-child(2) {
+    height: 460px;
+    margin-top: 56px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:last-child {
+    margin-top: 64px;
+    gap: 40px 32px;
+  }
+  .home-page [aria-labelledby="reviews-title"] {
+    padding-bottom: 146px;
+  }
+  .home-page [aria-labelledby="reviews-title"] dl {
+    margin-top: 64px;
+    gap: 0;
+  }
+  .home-page [aria-labelledby="reviews-title"] dd {
+    font-size: 28px;
+  }
+  .home-page [aria-labelledby="reviews-title"] ul {
+    margin-top: 90px;
+    gap: 40px;
+  }
+  .home-page [aria-labelledby="reviews-title"] li > p:nth-of-type(1) {
+    min-height: 56px;
+    line-height: 28px;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    margin-top: 32px;
+  }
+  .home-page [aria-labelledby="faq-title"] {
+    padding-block: 0 112px;
+  }
+}
+
+@media (width < 640px) {
+  .home-page {
+    --text-section: 2.75rem;
+    --text-subtitle: 1.125rem;
+    --text-item: 1.25rem;
+  }
+  .home-page .text-subtitle {
+    font-weight: 400;
+  }
+  .home-page .ticker {
+    height: 56px;
+  }
+  .home-ready {
+    padding-block: 72px 187px;
+  }
+  .home-works {
+    padding-bottom: 46px;
+  }
+  .home-page [aria-roledescription] > div:first-child {
+    margin-bottom: 32px;
+    gap: 24px;
+  }
+  .home-page [aria-roledescription] .text-subtitle {
+    font-size: 18px;
+  }
+  .home-ready [aria-roledescription] > div:first-child .text-subtitle {
+    margin-top: 16px;
+  }
+  .home-ready [aria-roledescription] > div:first-child {
+    margin-bottom: 36px;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:last-child > a {
+    height: 52px;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:first-child {
+    flex-basis: 100%;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:last-child {
+    width: 100%;
+    gap: 12px;
+    flex-direction: row-reverse;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:last-child > div {
+    display: flex;
+    gap: 8px;
+  }
+  .home-page [aria-roledescription] > div:first-child > div:last-child > a {
+    flex: 1;
+    padding-inline: 8px;
+  }
+  .home-page [aria-roledescription] ul {
+    gap: 12px;
+  }
+  .home-ready [aria-roledescription] li:not([aria-hidden]) {
+    width: calc((100vw - 40px) / 2);
+  }
+  .home-works [aria-roledescription] li:not([aria-hidden]) {
+    width: 240px;
+  }
+  .home-page [aria-roledescription] .text-item {
+    font-size: 18px;
+  }
+  .home-page [aria-roledescription] .text-meta {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .home-ready article > div:last-child {
+    padding-top: 8px;
+  }
+  .home-page [aria-roledescription] .text-caps {
+    font-size: 9px;
+  }
+  .home-page [aria-roledescription] a[class*="size-10"],
+  .home-page [aria-roledescription] button[class*="size-10"] {
+    width: 44px;
+    height: 44px;
+  }
+  .home-page [aria-labelledby="fillings-title"] {
+    padding-block: 88px 104px;
+  }
+  .home-page [aria-labelledby="fillings-title"] > div:last-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 32px;
+    gap: 24px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button {
+    min-height: 88px;
+    padding-top: 20px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:last-child {
+    margin-left: 72px;
+    padding-right: 12px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:last-child > span:first-child {
+    font-size: 20px;
+    line-height: 28px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:first-child {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .home-page
+    [aria-labelledby="fillings-title"]
+    li
+    button[aria-pressed="false"]
+    > span:last-child
+    > span:last-child {
+    position: absolute;
+  }
+  .home-page [aria-labelledby="fillings-title"] li:first-child button,
+  .home-page [aria-labelledby="fillings-title"] li:nth-child(4) button {
+    min-height: 108px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li:first-child button {
+    min-height: 138px;
+  }
+  .home-page
+    [aria-labelledby="fillings-title"]
+    li:first-child
+    button
+    > span:last-child
+    > span:first-child {
+    max-width: 240px;
+  }
+  .home-page [aria-labelledby="fillings-title"] li button > span:last-child > span:last-child {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .home-page [aria-labelledby="fillings-title"] ul + div {
+    padding: 44px 0 0;
+  }
+  .home-page [aria-labelledby="fillings-title"] ul + div p {
+    font-size: 20px;
+  }
+  .home-page [aria-labelledby="fillings-title"] ul + div a {
+    width: 100%;
+  }
+  .home-page [aria-labelledby="event-cake-title"] {
+    padding-top: 48px;
+    padding-bottom: 89px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:first-child > p {
+    width: auto;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol {
+    margin-top: 66px;
+    gap: 38px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol li {
+    position: relative;
+    padding-left: 64px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol li > div {
+    position: absolute;
+    top: 0;
+    bottom: -38px;
+    left: 0;
+    height: auto;
+    width: 48px;
+    flex-direction: column;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol li > div > span {
+    width: 48px;
+    font-size: 14px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol li > div > :last-child {
+    width: 1px;
+    height: auto;
+    margin-top: 12px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol li:last-child > div > :last-child {
+    display: none;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol h3 {
+    margin-top: 0;
+    font-size: 24px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol li > p:last-child {
+    font-size: 15px;
+    line-height: 24px;
+    max-width: none;
+    font-weight: 300;
+  }
+  .home-page [aria-labelledby="event-cake-title"] ol h3 + p {
+    font-size: 14px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:last-child:not(:first-child) {
+    margin-top: 64px;
+    padding: 32px 24px;
+    gap: 24px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:last-child h3 {
+    font-size: 28px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:last-child > div > p {
+    font-size: 14px;
+    line-height: 24px;
+  }
+  .home-page [aria-labelledby="event-cake-title"] > div:last-child > a {
+    width: 100%;
+  }
+  .home-page [aria-labelledby="author-title"] > div {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 72px;
+    gap: 32px;
+    min-height: 1383px;
+    align-content: start;
+  }
+  .home-page [aria-labelledby="author-title"] h2 {
+    font-size: 32px;
+  }
+  .home-page [aria-labelledby="author-title"] h2 + p {
+    font-size: 16px;
+    font-weight: 300;
+  }
+  .home-page [aria-labelledby="author-title"] blockquote {
+    font-size: 22px;
+    line-height: 30px;
+    margin-top: 48px;
+    white-space: pre-line;
+  }
+  .home-page [aria-labelledby="author-title"] dl {
+    gap: 8px;
+    margin-top: 56px;
+    padding-top: 24px;
+  }
+  .home-page [aria-labelledby="author-title"] dd {
+    font-size: 24px;
+  }
+  .home-page [aria-labelledby="author-title"] dt {
+    font-size: 12px;
+    line-height: 20px;
+  }
+  .home-page [aria-labelledby="author-title"] > div > div:last-child > div:has(> p) {
+    font-size: 18px;
+    line-height: 30px;
+    font-weight: 300;
+    margin-top: 40px;
+  }
+  .home-page [aria-labelledby="author-title"] > div > div:last-child > div:last-child {
+    margin-top: 32px;
+  }
+  .home-page [aria-labelledby="author-title"] > div > div:last-child > div:last-child a {
+    width: 100%;
+  }
+  .home-page [aria-labelledby="bakery-title"] {
+    padding-block: 72px 122px;
+  }
+  .home-page [aria-labelledby="bakery-title"] h2 {
+    max-width: none;
+    text-wrap: wrap;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:nth-child(2) {
+    height: 300px;
+    margin-top: 32px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:last-child {
+    margin-top: 69px;
+    gap: 48px;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:last-child a {
+    width: 100%;
+  }
+  .home-page [aria-labelledby="bakery-title"] > div:last-child p {
+    font-size: 20px;
+    line-height: 28px;
+  }
+  .home-page [aria-labelledby="reviews-title"] {
+    padding-bottom: 152px;
+  }
+  .home-page [aria-labelledby="reviews-title"] > div:first-child {
+    gap: 24px;
+  }
+  .home-page [aria-labelledby="reviews-title"] > div:first-child > div:last-child,
+  .home-page [aria-labelledby="reviews-title"] > div:first-child a {
+    width: 100%;
+  }
+  .home-page [aria-labelledby="reviews-title"] dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 56px;
+    padding-block: 32px;
+  }
+  .home-page [aria-labelledby="reviews-title"] dd {
+    font-size: 20px;
+  }
+  .home-page [aria-labelledby="reviews-title"] dt {
+    font-size: 12px;
+    line-height: 20px;
+  }
+  .home-page [aria-labelledby="reviews-title"] ul {
+    margin-top: 41px;
+    gap: 33px;
+  }
+  .home-page [aria-labelledby="reviews-title"] li {
+    min-height: 231px;
+  }
+  .home-page [aria-labelledby="reviews-title"] li > p:nth-of-type(1) {
+    line-clamp: 4;
+    -webkit-line-clamp: 4;
+    font-size: 18px;
+    min-height: 112px;
+    line-height: 28px;
+    margin-top: 32px;
+  }
+  .home-page [aria-labelledby="reviews-title"] li > a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    margin-top: -1px;
+    margin-bottom: -12px;
+  }
+  .home-page [aria-labelledby="faq-title"] {
+    padding-block: 0 112px;
+  }
+  .home-page [aria-labelledby="faq-title"] > div:last-child {
+    margin-top: 64px;
+  }
+  .home-page [aria-labelledby="faq-title"] h3 button {
+    padding-bottom: 22px;
+  }
+  .home-page [aria-labelledby="faq-title"] h3 button > span:first-child {
+    font-size: 24px;
+  }
+  .home-page [aria-labelledby="faq-title"] > div:first-child > div:last-child,
+  .home-page [aria-labelledby="faq-title"] > div:first-child a {
+    width: 100%;
+  }
+}
+
+@media (width < 1280px) {
+  /* В узких кадрах интерьер растянут до прямоугольника кадра, без обрезки
+   * по бокам. Сохраняем всю витрину: проверено сравнением исходных пикселей. */
+  .home-page [aria-labelledby="bakery-title"] img {
+    object-fit: fill;
+  }
+}
+
+/* Подвал главной в кадре 390: логотип и контакты занимают весь ряд,
+ * разделы и торты — две колонки. Остальные страницы сохраняют свою раскладку. */
+@media (width < 640px) {
+  body:has(.home-page) footer > div > div:first-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 48px 12px;
+  }
+  body:has(.home-page) footer address > p:first-child,
+  body:has(.home-page) footer address > a {
+    font-size: 20px;
+  }
+  body:has(.home-page) footer a,
+  body:has(.home-page) footer p {
+    font-weight: 300;
+  }
+  body:has(.home-page) footer > div > div:first-child > :first-child,
+  body:has(.home-page) footer > div > div:first-child > :last-child {
+    grid-column: 1 / -1;
+  }
+  body:has(.home-page) footer > div > div:last-child {
+    display: grid;
+    gap: 12px;
+  }
+  body:has(.home-page) footer > div > div:last-child > div {
+    display: contents;
+  }
+  body:has(.home-page) footer > div > div:last-child > div > p:first-child {
+    order: 1;
+  }
+  body:has(.home-page) footer > div > div:last-child > p {
+    order: 2;
+  }
+  body:has(.home-page) footer > div > div:last-child ul {
+    order: 3;
+    flex-direction: column;
+  }
+  body:has(.home-page) footer > div > div:last-child > div > p:last-child {
+    order: 4;
+    margin-top: 0;
+  }
+}

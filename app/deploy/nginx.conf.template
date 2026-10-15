@@ -1,0 +1,65 @@
+# Единый вход контейнера на 8080 (платформа проксирует сюда, TLS снимает её Caddy).
+# При старте entrypoint.sh копирует конфиг в /tmp/nginx.conf.
+# Без root: pid и временные файлы — в /tmp.
+
+worker_processes 1;
+pid /tmp/nginx.pid;
+error_log stderr warn;
+
+events {
+    worker_connections 512;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    access_log off;
+    sendfile on;
+    server_tokens off;
+
+    client_body_temp_path /tmp/nginx-body;
+    proxy_temp_path /tmp/nginx-proxy;
+    fastcgi_temp_path /tmp/nginx-fastcgi;
+    uwsgi_temp_path /tmp/nginx-uwsgi;
+    scgi_temp_path /tmp/nginx-scgi;
+
+    # Заявка на торт — до 5 фото по 10 МБ (008a)
+    client_max_body_size 60m;
+
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ""      close;
+    }
+
+    server {
+        listen 8080;
+
+        # API проверяет цепочку XFF справа через TRUSTED_PROXY_NETWORKS.
+        # Непроверенные значения слева не считаются адресом клиента.
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_http_version 1.1;
+
+        # API — FastAPI
+        location /api/v1/ {
+            proxy_pass http://127.0.0.1:8000;
+            proxy_read_timeout 120s;
+        }
+
+        # Видео до 100 МБ плюс multipart; подготовка может занять две минуты.
+        location = /api/v1/admin/uploads/video {
+            client_max_body_size 101m;
+            proxy_pass http://127.0.0.1:8000;
+            proxy_read_timeout 150s;
+        }
+
+        # Всё остальное, включая /healthz, — сайт
+        location / {
+            proxy_pass http://127.0.0.1:3000;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_read_timeout 60s;
+        }
+    }
+}

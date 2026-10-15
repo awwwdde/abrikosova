@@ -1,0 +1,39 @@
+{{ bakery }}
+
+Заказ № {{ d.order_number }} принят
+
+{% if d.after_hours %}
+Заказ пришёл вне рабочих часов, поэтому позвоним утром после {{ d.work_start }}:00 и подтвердим состав, дату и сумму.
+{% else %}
+Позвоним в течение 30 минут, подтвердим состав, дату и сумму и назовём способы оплаты.
+{% endif %}
+
+Состав заказа
+{% for line in d.lines %}
+— {{ line.name }}, {{ line.details }} × {{ line.quantity }} — {{ line.total }}
+{% endfor %}
+
+Позиции: {{ d.subtotal }}
+{{ d.method }}: {{ d.delivery }}
+Итого: {{ d.total }}
+
+{{ d.method }}{% if d.when %}: {{ d.when }}{% endif %}
+
+{% if d.address %}
+Адрес: {{ d.address }}
+{% endif %}
+
+Оплата после подтверждения.
+
+Посмотреть заказ: {{ d.order_url }}
+
+Связаться с нами:
+{% if d.phone %}
+Телефон: {{ d.phone }}
+{% endif %}
+{% if d.telegram_url %}
+Telegram: {{ d.telegram_url }}
+{% endif %}
+{% if d.work_hours %}
+{{ d.work_hours }}
+{% endif %}

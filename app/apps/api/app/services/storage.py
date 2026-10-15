@@ -1,111 +1,228 @@
-"""Загрузка изображений в объектное хранилище.
+"""Медиа в PostgreSQL либо на постоянном диске при явном выборе filesystem.
 
-Хранилище — S3-совместимое: локально MinIO, на проде S3 Object Storage Timeweb
-Cloud (данные физически в РФ, что закрывает требование 152-ФЗ о локализации).
-Код один и тот же, различается только строка подключения.
-
-Что здесь происходит с картинкой и почему:
-
-* файл проверяется по содержимому, а не по заголовку `Content-Type` — заголовок
-  задаёт клиент, и ему верить нельзя;
-* изображение полностью пересобирается в WEBP через Pillow. Это не только
-  требование договора по формату: пересжатие отбрасывает всё, что не является
-  пикселями — EXIF с геометкой и моделью камеры, ICC-профили, а заодно любую
-  полезную нагрузку, спрятанную в метаданных;
-* SVG не принимается вовсе: это XML, внутри которого исполняется JavaScript;
-* имя файла из запроса не используется — ключ генерируется случайным, поэтому
-  ни обход каталогов, ни перезапись чужого объекта невозможны.
+Публичные фото и видео выдаёт отдельный маршрут с разрешёнными префиксами.
+Референсы заявок и дампы БД остаются закрытыми. Оригинальные имена файлов не
+используются; фото пересобираются в WEBP без EXIF.
 """
 
 import io
-import json
 import logging
+import os
+import re
+import shutil
+import tempfile
+import threading
 import uuid
-from typing import Final
+from pathlib import Path
+from typing import BinaryIO, Final
 
-import boto3
-from botocore.config import Config
-from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import HTTPException, UploadFile, status
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
+from pillow_heif import register_heif_opener
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
+from app.services import database_media
 
 logger = logging.getLogger(__name__)
-
+register_heif_opener()
 MAX_UPLOAD_BYTES: Final = 10 * 1024 * 1024
-# Максимальная сторона: фото с телефона в 4000px по ширине никому не нужно
-# на витрине, но заметно бьёт по скорости загрузки страницы
 MAX_DIMENSION: Final = 2000
+MAX_INPUT_PIXELS: Final = 25_000_000
+MAX_INPUT_EDGE: Final = 16_384
+# Декодирование ограничено независимо от числа HTTP-запросов.
+_IMAGE_WORKERS = threading.BoundedSemaphore(2)
 WEBP_QUALITY: Final = 82
-
-# Форматы, которые Pillow распознаёт и которые мы согласны принимать.
-# Список именно разрешительный: всё, чего в нём нет, отклоняется.
-ALLOWED_FORMATS: Final = {"JPEG", "PNG", "WEBP"}
-
-# Префиксы, содержимое которых можно отдавать анонимно. Всё остальное в бакете
-# (в первую очередь backups/ с дампами базы) остаётся закрытым.
-PUBLIC_PREFIXES: Final = ("products", "gallery", "fillings", "custom-cakes", "reviews")
-
-# Фото-референсы из заявок на торт. Их присылают частные лица, на снимке может
-# оказаться что угодно личное — поэтому префикс закрытый, в PUBLIC_PREFIXES его
-# нет, а админка получает файл через свой эндпоинт под авторизацией.
+ALLOWED_FORMATS: Final = {"JPEG", "PNG", "WEBP", "HEIF"}
+PUBLIC_PREFIXES: Final = (
+    "products",
+    "gallery",
+    "fillings",
+    "custom-cakes",
+    "reviews",
+    "pages",
+    "hero",
+)
 PRIVATE_REFERENCES_PREFIX: Final = "references"
 
 
 class StorageNotConfiguredError(Exception):
-    """Хранилище не настроено — загрузка невозможна."""
+    """Постоянный каталог не настроен."""
 
 
-def _client():
-    settings = get_settings()
-    if not (settings.s3_endpoint_url and settings.s3_bucket):
+def object_path(key: str) -> Path:
+    """Не допускает обхода каталогов, в том числе через символические ссылки."""
+    if not key or len(key) > 500 or not re.fullmatch(r"[A-Za-z0-9_./-]+", key):
+        raise ValueError("Недопустимый ключ файла")
+    parts = key.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        raise ValueError("Недопустимый ключ файла")
+    setting = get_settings().media_root
+    if not setting:
         raise StorageNotConfiguredError
+    root = Path(setting).resolve()
+    if any(root.joinpath(*parts[:index]).is_symlink() for index in range(1, len(parts) + 1)):
+        raise ValueError("Символические ссылки не поддерживаются")
+    target = root.joinpath(*parts).resolve()
+    if not target.is_relative_to(root) or target == root:
+        raise ValueError("Недопустимый ключ файла")
+    return target
 
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.s3_endpoint_url,
-        aws_access_key_id=settings.s3_access_key,
-        aws_secret_access_key=settings.s3_secret_key,
-        region_name=settings.s3_region,
-        config=Config(signature_version="s3v4", retries={"max_attempts": 3}),
-    )
+
+def _write(key: str, source: BinaryIO) -> None:
+    target = object_path(key)
+    target.parent.mkdir(parents=True, exist_ok=True, mode=0o750)
+    # Незавершённая загрузка не видна читателю и не портит прежний файл.
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".upload-", delete=False) as out:
+            temporary = Path(out.name)
+            shutil.copyfileobj(source, out, length=1024 * 1024)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(temporary, target)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+async def write_object(key: str, data: bytes) -> None:
+    if get_settings().media_storage == "database":
+        object_path(key)
+        await database_media.write(key, io.BytesIO(data))
+        return
+    await run_in_threadpool(_write, key, io.BytesIO(data))
+
+
+async def write_stream(key: str, source: BinaryIO) -> None:
+    if get_settings().media_storage == "database":
+        object_path(key)
+        await database_media.write(key, source)
+        return
+    await run_in_threadpool(_write, key, source)
+
+
+async def write_file(key: str, filename: str) -> None:
+    if get_settings().media_storage == "database":
+        object_path(key)
+        with open(filename, "rb") as source:
+            await database_media.write(key, source)
+        return
+
+    def copy() -> None:
+        with open(filename, "rb") as source:
+            _write(key, source)
+
+    await run_in_threadpool(copy)
+
+
+async def copy_to_file(key: str, filename: str) -> None:
+    if get_settings().media_storage == "database":
+        object_path(key)
+        await database_media.copy_to_file(key, filename)
+        return
+    await run_in_threadpool(shutil.copyfile, object_path(key), filename)
+
+
+async def object_size(key: str) -> int | None:
+    if get_settings().media_storage == "database":
+        object_path(key)
+        return await database_media.size(key)
+    try:
+        return (await run_in_threadpool(object_path(key).stat)).st_size
+    except FileNotFoundError:
+        return None
+
+
+async def ensure_storage() -> None:
+    root = get_settings().media_root
+    if not root:
+        raise StorageNotConfiguredError
+    await run_in_threadpool(Path(root).mkdir, parents=True, exist_ok=True, mode=0o750)
+    if get_settings().media_storage == "database":
+        await import_legacy_files()
+
+
+async def import_legacy_files() -> int:
+    """Первый запуск после перехода: переносит прежние файлы, не удаляя оригиналы."""
+    from sqlalchemy import func, select
+
+    from app.core.db import SessionLocal
+    from app.models import SiteSetting
+
+    marker = "media_disk_imported"
+    async with SessionLocal() as db:
+        await db.execute(select(func.pg_advisory_xact_lock(func.hashtext("media:disk-import"))))
+        if await db.get(SiteSetting, marker) is not None:
+            return 0
+        root = Path(get_settings().media_root)
+        files = await run_in_threadpool(lambda: list(root.rglob("*")))
+        count = 0
+        for path in files:
+            if path.is_symlink() or not path.is_file():
+                continue
+            key = path.relative_to(root).as_posix()
+            if any(part.startswith(".") for part in path.relative_to(root).parts):
+                continue
+            if key.split("/", 1)[0] not in (*PUBLIC_PREFIXES, "references", "backups"):
+                continue
+            object_path(key)
+            if await database_media.size(key) is None:
+                await write_file(key, str(path))
+                count += 1
+        db.add(SiteSetting(key=marker, value=True))
+        await db.commit()
+    logger.info("Файлы перенесены с диска в PostgreSQL: %s", count)
+    return count
+
+
+async def materialize(key: str) -> Path | None:
+    path = object_path(key)
+    if get_settings().media_storage == "database":
+        return await database_media.materialize(key)
+    return path if path.is_file() else None
+
+
+def _check_image(image: Image.Image) -> None:
+    if image.format not in ALLOWED_FORMATS:
+        raise HTTPException(status_code=400, detail="Поддерживаются только JPEG, PNG, WEBP и HEIC")
+    width, height = image.size
+    if width * height > MAX_INPUT_PIXELS or max(width, height) > MAX_INPUT_EDGE:
+        raise HTTPException(status_code=413, detail="Изображение слишком большое: максимум 25 Мп")
 
 
 def _convert_to_webp(raw: bytes) -> bytes:
-    """Проверяет, что это картинка, и пересобирает её в WEBP."""
-    try:
-        image = Image.open(io.BytesIO(raw))
-        image.verify()  # структурная проверка до декодирования пикселей
-    except (UnidentifiedImageError, OSError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Файл не является изображением",
-        ) from exc
+    """Размеры проверяются по заголовку до выделения памяти под пиксели."""
+    with _IMAGE_WORKERS:
+        try:
+            with Image.open(io.BytesIO(raw)) as image:
+                _check_image(image)
+                image.verify()
+            with Image.open(io.BytesIO(raw)) as image:
+                _check_image(image)
+                # thumbnail до RGB-конвертации позволяет JPEG-декодеру уменьшить
+                # снимок заранее; EXIF-поворот после уменьшения сохраняет ориентацию.
+                image.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+                oriented = ImageOps.exif_transpose(image)
+                converted = oriented.convert(
+                    "RGBA" if oriented.mode in ("RGBA", "LA", "P") else "RGB"
+                )
+                try:
+                    buffer = io.BytesIO()
+                    converted.save(buffer, format="WEBP", quality=WEBP_QUALITY, method=4)
+                    return buffer.getvalue()
+                finally:
+                    converted.close()
+                    oriented.close()
+        except Image.DecompressionBombError as exc:
+            raise HTTPException(status_code=413, detail="Изображение слишком большое") from exc
+        except (UnidentifiedImageError, OSError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="Файл не является изображением") from exc
 
-    # После verify() файл нужно открыть заново — объект становится непригоден
-    image = Image.open(io.BytesIO(raw))
-    if image.format not in ALLOWED_FORMATS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Поддерживаются только JPEG, PNG и WEBP",
-        )
 
-    # Прозрачность сохраняем, остальное приводим к RGB
-    image = image.convert("RGBA" if image.mode in ("RGBA", "LA", "P") else "RGB")
-    image.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
-
-    buffer = io.BytesIO()
-    # Новый объект Image без метаданных исходника
-    image.save(buffer, format="WEBP", quality=WEBP_QUALITY, method=4)
-    return buffer.getvalue()
-
-
-async def upload_image(file: UploadFile, prefix: str) -> str:
-    """Принимает файл, кладёт в хранилище WEBP-версию и возвращает ключ объекта."""
-    raw = await file.read()
-
+async def read_upload(file: UploadFile) -> bytes:
+    """Читает файл из запроса и проверяет размер — до конвертации."""
+    raw = await file.read(MAX_UPLOAD_BYTES + 1)
     if not raw:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Пустой файл")
     if len(raw) > MAX_UPLOAD_BYTES:
@@ -113,142 +230,59 @@ async def upload_image(file: UploadFile, prefix: str) -> str:
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Файл больше {MAX_UPLOAD_BYTES // (1024 * 1024)} МБ",
         )
+    return raw
 
-    # Pillow работает синхронно и на больших файлах ощутимо занимает поток
+
+async def convert_upload(file: UploadFile) -> bytes:
+    """Проверяет файл по содержимому и возвращает WEBP без метаданных.
+
+    Для загрузки нескольких файлов разом (фото-образцы заявки, 008a): сначала
+    проверяются все, и только потом что-то уходит в хранилище — плохой пятый
+    файл не оставит в бакете четыре сиротских.
+    """
+    raw = await read_upload(file)
+    return await run_in_threadpool(_convert_to_webp, raw)
+
+
+async def store_image(raw: bytes, prefix: str) -> str:
     webp = await run_in_threadpool(_convert_to_webp, raw)
+    return await put_webp(webp, prefix)
 
-    # Имя из запроса не используется: только префикс раздела и случайный id
+
+async def put_webp(webp: bytes, prefix: str) -> str:
     key = f"{prefix}/{uuid.uuid4().hex}.webp"
-
     try:
-        client = await run_in_threadpool(_client)
-        await run_in_threadpool(
-            client.put_object,
-            Bucket=get_settings().s3_bucket,
-            Key=key,
-            Body=webp,
-            ContentType="image/webp",
-            # Ключ случайный и не переиспользуется — публичные фото можно кэшировать
-            # навсегда. Закрытые не должны оседать в общих кэшах по дороге.
-            CacheControl=(
-                "public, max-age=31536000, immutable"
-                if prefix.startswith(PUBLIC_PREFIXES)
-                else "private, no-store"
-            ),
-        )
+        await write_object(key, webp)
     except StorageNotConfiguredError:
-        logger.error("Загрузка изображения невозможна: не настроены параметры S3")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Хранилище изображений не настроено",
-        ) from None
-    except (BotoCoreError, ClientError):
-        logger.exception("Не удалось загрузить объект %s", key)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Не удалось сохранить изображение",
-        ) from None
-
-    logger.info("Загружено изображение %s (%s → %s байт)", key, len(raw), len(webp))
+        raise HTTPException(status_code=503, detail="Хранилище изображений не настроено") from None
+    except OSError:
+        logger.exception("Не удалось сохранить изображение в раздел %s", prefix)
+        raise HTTPException(status_code=502, detail="Не удалось сохранить изображение") from None
     return key
 
 
-async def read_object(key: str) -> bytes | None:
-    """Читает закрытый объект целиком. None — объекта нет или хранилище недоступно.
+async def upload_image(file: UploadFile, prefix: str) -> str:
+    return await store_image(await read_upload(file), prefix)
 
-    Используется для референсов из заявок: админка получает их через свой
-    эндпоинт под JWT, а не по подписанной ссылке. Подпись S3 включает хост,
-    а в разработке браузер и API видят MinIO по разным адресам — ссылка,
-    подписанная для `minio:9000`, в браузере бы не открылась. Заодно каждый
-    просмотр чужой фотографии проходит через проверку прав.
-    """
+
+async def read_object(key: str) -> bytes | None:
     try:
-        client = await run_in_threadpool(_client)
-        response = await run_in_threadpool(
-            client.get_object, Bucket=get_settings().s3_bucket, Key=key
-        )
-        return await run_in_threadpool(response["Body"].read)
-    except StorageNotConfiguredError:
+        path = await materialize(key)
+        return await run_in_threadpool(path.read_bytes) if path is not None else None
+    except (FileNotFoundError, ValueError, StorageNotConfiguredError):
         return None
-    except ClientError as exc:
-        if exc.response.get("Error", {}).get("Code") in ("NoSuchKey", "404"):
-            return None
-        logger.exception("Не удалось прочитать объект %s", key)
-        return None
-    except BotoCoreError:
-        logger.exception("Не удалось прочитать объект %s", key)
+    except OSError:
+        logger.exception("Не удалось прочитать файл")
         return None
 
 
 async def delete_image(key: str) -> None:
-    """Удаляет объект. Отсутствие объекта ошибкой не считается."""
     try:
-        client = await run_in_threadpool(_client)
-        await run_in_threadpool(client.delete_object, Bucket=get_settings().s3_bucket, Key=key)
-    except StorageNotConfiguredError:
+        object_path(key)
+        if get_settings().media_storage == "database":
+            await database_media.remove(key)
+        await run_in_threadpool(object_path(key).unlink, missing_ok=True)
+    except (ValueError, StorageNotConfiguredError):
         return
-    except (BotoCoreError, ClientError):
-        # Запись в БД уже удалена; осиротевший объект в хранилище не повод
-        # ронять запрос — он попадёт в лог и вычистится отдельно
-        logger.exception("Не удалось удалить объект %s", key)
-
-
-async def ensure_bucket() -> None:
-    """Создаёт бакет, если его нет.
-
-    Нужно только для локального MinIO, который стартует пустым. На проде бакет
-    заводится в панели Timeweb Cloud заранее, и вызов просто ничего не меняет.
-    """
-    settings = get_settings()
-    try:
-        client = await run_in_threadpool(_client)
-    except StorageNotConfiguredError:
-        logger.warning("S3 не настроен — загрузка изображений будет недоступна")
-        return
-
-    try:
-        await run_in_threadpool(client.head_bucket, Bucket=settings.s3_bucket)
-        return
-    except ClientError:
-        pass
-
-    try:
-        await run_in_threadpool(client.create_bucket, Bucket=settings.s3_bucket)
-        logger.info("Создан бакет %s", settings.s3_bucket)
-    except (BotoCoreError, ClientError):
-        logger.exception("Не удалось создать бакет %s", settings.s3_bucket)
-        return
-
-    # Публичное чтение выдаётся ТОЛЬКО на префиксы с изображениями.
-    #
-    # Раньше здесь стоял `/*` на весь бакет — и вместе с фотографиями наружу
-    # открывались дампы базы из backups/, то есть все персональные данные
-    # клиентов, доступные любому, кто угадает имя файла. Права на запись и на
-    # перечисление объектов не выдаются никогда.
-    policy = {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Principal": {"AWS": ["*"]},
-                "Action": ["s3:GetObject"],
-                "Resource": [
-                    f"arn:aws:s3:::{settings.s3_bucket}/{prefix}/*" for prefix in PUBLIC_PREFIXES
-                ],
-            }
-        ],
-    }
-    try:
-        await run_in_threadpool(
-            client.put_bucket_policy,
-            Bucket=settings.s3_bucket,
-            Policy=json.dumps(policy),
-        )
-        logger.info("Для бакета %s включено публичное чтение объектов", settings.s3_bucket)
-    except (BotoCoreError, ClientError):
-        # На проде политика задаётся в панели провайдера, и прав на её смену
-        # у приложения может не быть — это не повод падать при старте
-        logger.warning(
-            "Не удалось установить политику доступа для %s — настройте её в панели хранилища",
-            settings.s3_bucket,
-        )
+    except OSError:
+        logger.exception("Не удалось удалить файл %s", key)

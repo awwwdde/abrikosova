@@ -1,50 +1,125 @@
 "use client";
 
-import Link from "next/link";
-import { AdminPageHeader, StateBlock, useAdminData } from "@/components/admin/data-table";
+/**
+ * Главная админки по концепту new/design/admin/Dashboard.dc.html (задание 011b).
+ * Все данные — одним запросом `GET /admin/dashboard`; «сегодня» и «неделя»
+ * посчитаны бэкендом по времени кондитерской.
+ */
 
-type Stats = {
-  orders_new: number;
-  orders_today: number;
-  orders_week: number;
-  consultations_new: number;
-  consultations_week: number;
-  products_total: number;
-  reviews_unpublished: number;
-};
+import { ArrowClockwise, Plus } from "@phosphor-icons/react";
+import { useAdminAuth } from "@/components/admin/auth-context";
+import { useAdminData } from "@/components/admin/use-admin-data";
+import {
+  ActivitySection,
+  CalendarSection,
+  DashboardSkeleton,
+  ReviewsSection,
+} from "@/components/admin/dashboard/bottom";
+import {
+  ConsultationsSection,
+  PlanSection,
+  PopularSection,
+} from "@/components/admin/dashboard/lists";
+import { CategoriesCard, OrdersByDayCard, RevenueCard } from "@/components/admin/dashboard/summary";
+import { Button, ButtonLink, Notice } from "@/components/admin/ui";
+import { greeting, longDate } from "@/lib/admin-dashboard";
+import type { Dashboard } from "@/lib/api";
+import { pluralRu, typograf } from "@/lib/format";
 
-const CARDS: { key: keyof Stats; label: string; href: string }[] = [
-  { key: "orders_new", label: "Новых заказов", href: "/admin/orders" },
-  { key: "orders_today", label: "Заказов сегодня", href: "/admin/orders" },
-  { key: "orders_week", label: "Заказов за неделю", href: "/admin/orders" },
-  { key: "consultations_new", label: "Новых заявок", href: "/admin/consultations" },
-  { key: "consultations_week", label: "Заявок за неделю", href: "/admin/consultations" },
-  { key: "products_total", label: "Товаров в каталоге", href: "/admin/catalog" },
-  { key: "reviews_unpublished", label: "Отзывов на модерации", href: "/admin/reviews" },
-];
+function subtitle(data: Dashboard): string {
+  const waiting = data.counters.orders_new;
+  const orders =
+    waiting === 0
+      ? "Новых заказов нет."
+      : `${waiting} ${pluralRu(waiting, ["новый заказ ждёт", "новых заказа ждут", "новых заказов ждут"])} подтверждения.`;
+  return typograf(`${longDate(data.today)}. ${orders}`);
+}
 
-export default function AdminDashboard() {
-  const { data, loading, error } = useAdminData<Stats>("/admin");
+export default function AdminDashboardPage() {
+  const { user } = useAdminAuth();
+  const { data, loading, error, reload } = useAdminData<Dashboard>("/admin/dashboard");
+  // «Добрый день, Елена» — первое слово имени (011c)
+  const firstName = user?.name.trim().split(/\s+/)[0];
+
+  if (!data) {
+    if (error && !loading) {
+      return (
+        <Notice
+          role="alert"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<ArrowClockwise aria-hidden="true" size={16} />}
+              onClick={() => void reload()}
+            >
+              Повторить
+            </Button>
+          }
+        >
+          Не удалось загрузить сводку: {error}
+        </Notice>
+      );
+    }
+    return <DashboardSkeleton />;
+  }
 
   return (
-    <div>
-      <AdminPageHeader title="Дашборд" description="Сводка за сегодня и неделю" />
-      <StateBlock loading={loading} error={error} />
-
-      {data ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CARDS.map((card) => (
-            <Link
-              key={card.key}
-              href={card.href}
-              className="rounded-lg bg-surface p-5 shadow-raised transition-[box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-hover"
-            >
-              <p className="tnum font-display text-3xl">{data[card.key]}</p>
-              <p className="mt-1 text-xs text-ink-muted">{card.label}</p>
-            </Link>
-          ))}
+    <div className="flex flex-col gap-7">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="font-display text-[34px] leading-[1.05] font-normal adm-sm:text-[42px]">
+            {greeting(data.now)}
+            {firstName ? `, ${firstName}` : ""}
+          </h1>
+          <p className="text-[15px] text-admin-muted">{subtitle(data)}</p>
         </div>
+        <ButtonLink
+          href="/admin/catalog"
+          icon={<Plus aria-hidden="true" size={18} weight="bold" />}
+          className="pr-5 pl-4"
+        >
+          Новый товар
+        </ButtonLink>
+      </div>
+
+      {error ? (
+        <Notice
+          role="alert"
+          action={
+            <Button variant="outline" size="sm" onClick={() => void reload()}>
+              Повторить
+            </Button>
+          }
+        >
+          Не удалось обновить сводку, показаны прежние данные
+        </Notice>
       ) : null}
+
+      <div className="grid grid-cols-1 items-stretch gap-5 adm-lg:grid-cols-2 adm-xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+        <div className="adm-lg:col-span-2 adm-xl:col-span-1">
+          <RevenueCard revenue={data.revenue} />
+        </div>
+        <OrdersByDayCard data={data.orders_by_day} />
+        <CategoriesCard data={data.categories} />
+      </div>
+
+      <div className="grid grid-cols-1 items-start gap-5 adm-xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+        <PlanSection plan={data.plan} />
+        <ConsultationsSection data={data.consultations} now={data.now} />
+      </div>
+
+      <PopularSection products={data.popular} />
+
+      <div className="grid grid-cols-1 items-start gap-5 adm-md:grid-cols-2 adm-xl:grid-cols-3">
+        <CalendarSection initial={data.calendar} today={data.today} />
+        <ActivitySection
+          items={data.activity}
+          now={data.now}
+          journalHref={user?.role === "owner" ? "/admin/journal" : undefined}
+        />
+        <ReviewsSection initial={data.reviews} />
+      </div>
     </div>
   );
 }

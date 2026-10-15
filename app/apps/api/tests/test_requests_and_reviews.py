@@ -1,63 +1,11 @@
-"""Заявка на торт под событие и отзывы в карточке товара."""
-
-from datetime import timedelta
+"""Отзывы в карточке товара и фильтр галереи."""
 
 from sqlalchemy import delete, select
 
-from app.core.clock import local_today
 from app.core.db import SessionLocal
-from app.models import ConsultationRequest, GalleryItem, Occasion, Review
+from app.models import GalleryItem, Occasion, Review
 
-CONSULTATION = "/api/v1/custom-cakes/consultation"
-
-
-def _form(**overrides) -> dict[str, str]:
-    return {"name": "Аня", "phone": "+79001234567", "consent_pd": "true"} | overrides
-
-
-async def test_consultation_saves_event_details(client) -> None:
-    event_date = (local_today() + timedelta(days=60)).isoformat()
-    response = await client.post(
-        CONSULTATION,
-        data=_form(occasion="wedding", event_date=event_date, guests_count="45"),
-    )
-    assert response.status_code == 201, response.text
-
-    async with SessionLocal() as session:
-        row = await session.get(ConsultationRequest, response.json()["id"])
-        assert row is not None
-        assert row.occasion is Occasion.WEDDING
-        assert row.event_date.isoformat() == event_date
-        assert row.guests_count == 45
-        assert row.reference_image_key is None
-        await session.delete(row)
-        await session.commit()
-
-
-async def test_consultation_rejects_past_event_date(client) -> None:
-    yesterday = (local_today() - timedelta(days=1)).isoformat()
-    response = await client.post(CONSULTATION, data=_form(event_date=yesterday))
-    assert response.status_code == 422
-
-
-async def test_consultation_rejects_non_image_reference(client) -> None:
-    """Файл проверяется по содержимому, а не по расширению и Content-Type."""
-    response = await client.post(
-        CONSULTATION,
-        data=_form(),
-        files={"reference": ("photo.png", b"<script>alert(1)</script>", "image/png")},
-    )
-    assert response.status_code == 400
-
-
-async def test_consultation_rejects_unknown_fields(client) -> None:
-    response = await client.post(CONSULTATION, data=_form(is_vip="true"))
-    assert response.status_code == 422
-
-
-async def test_consultation_still_requires_consent(client) -> None:
-    response = await client.post(CONSULTATION, data=_form(consent_pd="false"))
-    assert response.status_code == 422
+# Заявка на торт — tests/test_custom_cakes.py (008a)
 
 
 async def test_product_card_shows_only_its_published_reviews(client, catalog) -> None:
@@ -91,7 +39,7 @@ async def test_product_card_shows_only_its_published_reviews(client, catalog) ->
     slug = (
         await client.get(
             "/api/v1/catalog/products",
-            params={"category": catalog.category_slug, "occasion": "kids"},
+            params={"category": catalog.category_slug, "recipient": "kids"},
         )
     ).json()["items"][0]["slug"]
     card = (await client.get(f"/api/v1/catalog/products/{slug}")).json()

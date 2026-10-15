@@ -12,6 +12,19 @@ PHONE_PATTERN = r"^\+?[\d\s\-()]{7,20}$"
 Phone = Annotated[str, Field(min_length=7, max_length=20, pattern=PHONE_PATTERN)]
 PersonName = Annotated[str, Field(min_length=2, max_length=200)]
 
+# Ссылки, которые админка вписывает в контент и которые потом попадают в href
+# на сайте. Только https: иначе в поле можно было бы сохранить `javascript:...`
+# и получить XSS на каждой странице, где выводится ссылка.
+HttpsUrl = Annotated[str, Field(max_length=500, pattern=r"^https://[^\s<>\"']+$")]
+
+# Ссылка кнопки в контенте страницы: внутренний путь сайта («/catalog») или https.
+# Путь обязан начинаться с одного слэша: «//evil.example» браузер понял бы
+# как адрес другого сайта.
+SafeHref = Annotated[
+    str,
+    Field(max_length=500, pattern=r"^(/([^/\\\s<>\"'][^\s<>\"']*)?|https://[^\s<>\"']+)$"),
+]
+
 
 class Page[T](BaseModel):
     items: list[T]

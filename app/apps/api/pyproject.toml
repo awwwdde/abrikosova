@@ -14,15 +14,19 @@ dependencies = [
     "redis>=5.2",
     "python-multipart>=0.0.20",
     "pillow>=11.0",
-    "boto3>=1.35",
+    # HEIC с айфона — фото-образцы в заявке на торт (008a)
+    "pillow-heif>=0.20",
     "httpx[socks]>=0.28",
     "apscheduler>=3.11",
     "argon2-cffi>=23.1",
     "pyjwt>=2.10",
     "email-validator>=2.2",
+    # Шаблоны писем покупателю (007a): HTML и текст копии заказа
+    "jinja2>=3.1",
 ]
 
 [project.optional-dependencies]
+migration = ["boto3>=1.35"]
 dev = [
     "ruff>=0.8",
     "pytest>=8.3",
@@ -49,6 +53,10 @@ select = ["E", "F", "I", "B", "UP", "BLE", "T20"]
 [tool.ruff.lint.per-file-ignores]
 # Файлы миграций генерирует Alembic — переносы строк в них не наши, править вручную бессмысленно
 "alembic/versions/*.py" = ["E501"]
+# Интерактивная команда для сервера: вывод в терминал — её интерфейс, а не отладка
+"app/cli.py" = ["T201"]
+# Окружение тестовой базы задаётся до импорта приложения (011c)
+"tests/conftest.py" = ["E402"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

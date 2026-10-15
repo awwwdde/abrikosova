@@ -24,10 +24,16 @@ class GalleryItem(Base, CreatedAtMixin):
     __table_args__ = (
         CheckConstraint("tiers IS NULL OR tiers BETWEEN 1 AND 10", name="ck_gallery_tiers"),
         CheckConstraint("guests IS NULL OR guests >= 1", name="ck_gallery_guests"),
+        CheckConstraint(
+            "weight_grams IS NULL OR weight_grams > 0", name="ck_gallery_weight_positive"
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     image_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Второй кадр — срез или деталь: показывается при наведении на карточку работы.
+    # Необязателен: у части работ есть только общий план.
+    detail_image_key: Mapped[str | None] = mapped_column(String(500))
     caption: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     # Подпись работы по PDF «Этап 1» (решение 04 «Портфолио с подписями»):
@@ -38,6 +44,8 @@ class GalleryItem(Base, CreatedAtMixin):
         index=True,
     )
     tiers: Mapped[int | None] = mapped_column(Integer)
+    # Вес торта — третья цифра подписи «3 яруса · 6 кг · 45 гостей»
+    weight_grams: Mapped[int | None] = mapped_column(Integer)
     guests: Mapped[int | None] = mapped_column(Integer)
     # Месяц выполнения работы. Хранится датой (первое число месяца), а не строкой
     # «май 2026»: так по нему можно сортировать, а формат вывода — забота фронтенда.
@@ -70,6 +78,9 @@ class Review(Base, CreatedAtMixin):
         default=ReviewSource.MANUAL,
         nullable=False,
     )
+    # Ссылка на оригинал отзыва (Яндекс.Карты). Только https — проверяется в схеме
+    # админки, как у остальных ссылок, которые попадают в href на сайте.
+    external_url: Mapped[str | None] = mapped_column(String(500))
 
     product: Mapped["Product | None"] = relationship(back_populates="reviews")
 

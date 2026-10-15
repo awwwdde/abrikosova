@@ -6,22 +6,26 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /srv
 # postgresql-client даёт pg_dump и pg_restore — без них резервное копирование
 # из админки не работает
-RUN apt-get update     && apt-get install -y --no-install-recommends postgresql-client     && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/lib/abrikosova/media \
+    && chown -R 1001:1001 /var/lib/abrikosova
 
 FROM base AS deps
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir ".[dev]"
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir ".[dev,migration]"
 
 FROM deps AS dev
 COPY . .
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers", "--reload"]
 
 FROM base AS runner
 COPY pyproject.toml ./
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 COPY . .
-RUN useradd --create-home --uid 1001 appuser && chown -R appuser:appuser /srv
+RUN useradd --create-home --uid 1001 appuser && chown -R appuser:appuser /srv /var/lib/abrikosova
 USER appuser
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

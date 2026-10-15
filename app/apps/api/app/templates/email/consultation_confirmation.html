@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Заявка № {{ d.number }} принята</title>
+</head>
+{# Почтовые клиенты понимают только простую разметку: таблицы и встроенные стили #}
+<body style="margin:0;padding:0;background:#fbf7f0;font-family:Arial,Helvetica,sans-serif;color:#1a1210;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbf7f0;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e5dccb;">
+          <tr>
+            <td style="background:#842124;padding:20px 28px;">
+              <img src="{{ d.logo_url }}" alt="{{ bakery }}" width="140" style="display:block;border:0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 28px 8px;">
+              <h1 style="margin:0;font-size:24px;line-height:30px;font-weight:normal;color:#842124;">Заявка № {{ d.number }} принята</h1>
+              <p style="margin:8px 0 0;font-size:16px;line-height:22px;">{{ d.title }}</p>
+              <p style="margin:12px 0 0;font-size:15px;line-height:22px;color:#5a524f;">
+                Елена позвонит в течение дня, назовёт вес, срок и стоимость и поможет с начинкой.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;">
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;color:#5a524f;">Гостей</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;">{{ d.guests }}, вес около {{ d.weight }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;color:#5a524f;">Начинка</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;">{{ d.filling }}</td>
+                </tr>
+                {% if d.extras %}
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;color:#5a524f;">Дополнительно</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;">{{ d.extras | join(", ") }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;color:#5a524f;">Получение</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;">{{ d.method }}</td>
+                </tr>
+                {% if d.references %}
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;color:#5a524f;">Фото-образцов</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;">{{ d.references }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;font-weight:bold;">Ориентир</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;font-weight:bold;">{{ d.estimate }}</td>
+                </tr>
+              </table>
+              {% if d.wishes %}
+              <p style="margin:12px 0 0;font-size:14px;line-height:21px;"><b>Пожелания:</b> {{ d.wishes }}</p>
+              {% endif %}
+              <p style="margin:12px 0 0;font-size:14px;line-height:21px;color:#5a524f;">Ориентир — не итог: точную сумму назовём после расчёта.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 28px 28px;font-size:13px;line-height:20px;color:#5a524f;">
+              {% if d.phone %}Телефон: {{ d.phone }}<br>{% endif %}
+              {% if d.telegram_url %}<a href="{{ d.telegram_url }}" style="color:#842124;">Написать в Telegram</a><br>{% endif %}
+              {% if d.work_hours %}{{ d.work_hours }}<br>{% endif %}
+              {{ bakery }}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

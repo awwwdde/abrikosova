@@ -11,8 +11,10 @@ JWT — HS256 со строгим allowlist алгоритмов. Ключевы
 * обязательные клеймы `exp`, `iat`, `nbf`, `iss`, `aud`, `sub`, `jti`, `typ`;
 * `typ` разделяет access и refresh: refresh-токен нельзя предъявить вместо
   access и наоборот;
-* access живёт 15 минут, refresh — 30 дней с ротацией и отзывом старого `jti`
-  (отзыв — в Redis, см. app/core/token_store.py).
+* access живёт 15 минут, refresh — 30 дней с ротацией `jti`;
+* оба токена несут `sid` — идентификатор серверной сессии (таблица
+  admin_sessions, app/services/sessions.py): по ней проверяется, что вход
+  не отозван, и ловится повторное использование старого refresh-токена.
 """
 
 import uuid
@@ -43,6 +45,12 @@ def hash_password(password: str) -> str:
     return _hasher.hash(password)
 
 
+# Фиктивный хеш для входа с несуществующим e-mail: пароль проверяется и тогда,
+# чтобы время ответа не выдавало, есть ли аккаунт. Считается один раз при
+# импорте модуля — хешировать на каждый запрос дорого и незачем.
+DUMMY_PASSWORD_HASH = _hasher.hash("dummy-password-for-timing")
+
+
 def verify_password(password: str, password_hash: str) -> bool:
     try:
         return _hasher.verify(password_hash, password)
@@ -56,11 +64,16 @@ def needs_rehash(password_hash: str) -> bool:
 
 
 def _create_token(
-    subject: str, role: str, token_type: TokenType, ttl: timedelta
+    subject: str,
+    role: str,
+    token_type: TokenType,
+    ttl: timedelta,
+    sid: str | None = None,
+    jti: str | None = None,
 ) -> tuple[str, str]:
     settings = get_settings()
     now = datetime.now(UTC)
-    jti = str(uuid.uuid4())
+    jti = jti or str(uuid.uuid4())
 
     payload: dict[str, Any] = {
         "sub": subject,
@@ -73,20 +86,32 @@ def _create_token(
         "iss": settings.jwt_issuer,
         "aud": settings.jwt_audience,
     }
+    if sid is not None:
+        payload["sid"] = sid
     token = jwt.encode(payload, settings.jwt_secret, algorithm=ALLOWED_ALGORITHMS[0])
     return token, jti
 
 
-def create_access_token(subject: str, role: str) -> tuple[str, str]:
+def create_access_token(subject: str, role: str, sid: str | None = None) -> tuple[str, str]:
     settings = get_settings()
     return _create_token(
-        subject, role, "access", timedelta(minutes=settings.access_token_ttl_minutes)
+        subject, role, "access", timedelta(minutes=settings.access_token_ttl_minutes), sid=sid
     )
 
 
-def create_refresh_token(subject: str, role: str) -> tuple[str, str]:
+def create_refresh_token(
+    subject: str, role: str, sid: str | None = None, jti: str | None = None
+) -> tuple[str, str]:
+    """Refresh с заданным `jti`: он должен совпасть с `current_jti` сессии."""
     settings = get_settings()
-    return _create_token(subject, role, "refresh", timedelta(days=settings.refresh_token_ttl_days))
+    return _create_token(
+        subject,
+        role,
+        "refresh",
+        timedelta(days=settings.refresh_token_ttl_days),
+        sid=sid,
+        jti=jti,
+    )
 
 
 def decode_token(token: str, expected_type: TokenType) -> dict[str, Any]:

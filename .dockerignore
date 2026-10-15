@@ -1,0 +1,21 @@
+# Контекст сборки корневого Dockerfile (деплой на платформу): только код api, сайта
+# и файлы запуска. Макеты (new/), старый сайт (old/) и задания в образ не идут.
+*
+!app/apps/api
+!app/apps/web
+!app/deploy
+
+app/apps/web/node_modules
+app/apps/web/.next
+app/apps/web/tsconfig.tsbuildinfo
+app/apps/web/.env*
+app/apps/api/.env
+app/apps/api/.venv
+app/apps/api/tests
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.env
+**/.env.*
+**/*.pem
+**/*.key

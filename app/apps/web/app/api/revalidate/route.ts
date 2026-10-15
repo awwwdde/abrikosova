@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
@@ -8,6 +8,10 @@ import { NextResponse, type NextRequest } from "next/server";
  * Но после правки в админке владелица должна видеть результат сразу, а не
  * через интервал ревалидации — поэтому бэкенд после каждой мутации дёргает
  * этот маршрут и сбрасывает конкретные пути.
+ *
+ * Кроме путей — теги (014): ответы `GET /pages/<ключ>` помечены тегом ключа
+ * (`cacheTags` в lib/api.ts), и правка контактов сразу видна на всех страницах,
+ * которые их читают, включая каждую карточку товара.
  *
  * Маршрут закрыт общим секретом: без него любой желающий мог бы бесконечно
  * сбрасывать кэш и превращать ISR в постоянную нагрузку на API.
@@ -35,8 +39,14 @@ export async function POST(request: NextRequest) {
   }
 
   let paths: string[] = [];
+  let tags: string[] = [];
   try {
-    const body = (await request.json()) as { paths?: unknown };
+    const body = (await request.json()) as { paths?: unknown; tags?: unknown };
+    if (Array.isArray(body.tags)) {
+      tags = body.tags
+        .filter((t): t is string => typeof t === "string" && /^[a-z_]{1,40}$/.test(t))
+        .slice(0, 20);
+    }
     if (Array.isArray(body.paths)) {
       paths = body.paths
         .filter((p): p is string => typeof p === "string")
@@ -51,6 +61,9 @@ export async function POST(request: NextRequest) {
   for (const path of paths) {
     revalidatePath(path);
   }
+  for (const tag of tags) {
+    revalidateTag(tag);
+  }
 
-  return NextResponse.json({ revalidated: paths });
+  return NextResponse.json({ revalidated: paths, tags });
 }

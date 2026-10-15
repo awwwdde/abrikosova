@@ -36,7 +36,11 @@ export type Page<T> = Omit<Schemas["Page_ProductListItem_"], "items"> & { items:
 // Перечисления — строковые union-типы из схемы
 export type ProductTag = Schemas["ProductTag"];
 export type Occasion = Schemas["Occasion"];
+/** Повод в заявке на торт — «таблетки» окна заявки (008a). */
+export type RequestOccasion = Schemas["RequestOccasion"];
 export type DietaryTag = Schemas["DietaryTag"];
+export type Recipient = Schemas["Recipient"];
+export type ImageRole = Schemas["ImageRole"];
 export type PortionsRange = Schemas["PortionsRange"];
 export type Availability = Schemas["Availability"];
 export type DeliveryMethod = Schemas["DeliveryMethod"];
@@ -44,6 +48,7 @@ export type DeliveryInterval = Schemas["DeliveryInterval"];
 export type OrderStatus = Schemas["OrderStatus"];
 export type ConsultationStatus = Schemas["ConsultationStatus"];
 export type ConsultationSource = Schemas["ConsultationSource"];
+export type ReviewSource = Schemas["ReviewSource"];
 
 // Публичная часть
 export type SubCategory = Schemas["SubCategoryOut"];
@@ -57,9 +62,40 @@ export type CartItem = Schemas["CartItemOut"];
 export type Cart = Schemas["CartOut"];
 export type Review = Schemas["ReviewOut"];
 export type GalleryItem = Schemas["GalleryItemOut"];
+export type GalleryOccasion = Schemas["GalleryOccasion"];
+export type GalleryFacet = Schemas["GalleryFacet"];
+export type GalleryPageContent = Schemas["GalleryPageOut"];
 export type PageContent = Schemas["PageContentOut"];
+/** Главная и контакты: у `content` есть схема на бэкенде (schemas/pages.py). */
+export type HomePage = Schemas["HomePageOut"];
+export type AboutPage = Schemas["AboutPageOut"];
+export type AboutContent = Schemas["AboutContent"];
+export type HomeContent = Schemas["HomeContent"];
+export type ContactsPage = Schemas["ContactsPageOut"];
+export type ContactsContent = Schemas["ContactsContent"];
+export type LegalPage = Schemas["LegalPageOut"];
+export type CustomCakesContentPage = Schemas["CustomCakesContentPageOut"];
+export type CakesHeaderMenu = Schemas["CakesHeaderMenu"];
+export type HeroBlock = Schemas["HeroBlock"];
+export type AuthorBlock = Schemas["AuthorBlock"];
+export type FaqItem = Schemas["FaqItem"];
+/** «Торты на заказ» (008a): страница, сетка дизайнов, дизайн, калькулятор, заявка. */
+export type CustomCakesInfo = Schemas["CustomCakesInfoOut"];
+export type CustomCakeList = Schemas["CustomCakeListOut"];
+export type CustomCakeCard = Schemas["CustomCakeCard"];
+export type CustomCakeDetail = Schemas["CustomCakeDetailOut"];
+export type CakeEstimate = Schemas["EstimateOut"];
+export type CakeFilling = Schemas["FillingCardOut"];
+export type ConsultationAccepted = Schemas["ConsultationAccepted"];
+/** Работа из «Работ» как образец в окне заявки — «Заказать похожий» (008c) */
+export type GalleryWork = Schemas["GalleryWorkOut"];
+/** Фото для страницы входа в админку (работы и главные фото товаров). */
+export type LoginPhoto = Schemas["LoginPhotoOut"];
+export type AdminSessionInfo = Schemas["SessionOut"];
 export type OrderItem = Schemas["OrderItemOut"];
-export type Order = Schemas["OrderOut"];
+/** «Заказ принят» (007a): маски контактов, открывается по номеру и токену */
+export type Order = Schemas["OrderConfirmationOut"];
+export type OrderCreated = Schemas["OrderCreated"];
 export type OrderCreate = Schemas["OrderCreate"];
 export type CatalogFilters = Schemas["CatalogFilters"];
 /** Вариант фильтра каталога: значение для запроса и подпись для интерфейса. */
@@ -68,6 +104,9 @@ export type FilterOption<T extends string> = { value: T; label: string };
 // Админка
 export type ProductAdmin = Schemas["ProductAdminOut"];
 export type ProductIn = Schemas["ProductIn"];
+export type VariantIn = Schemas["VariantIn"];
+export type VariantAdmin = Schemas["VariantAdminOut"];
+export type ProductVariant = Schemas["VariantOut"];
 export type ConsultationAdmin = Schemas["ConsultationAdminOut"];
 export type OrderAdminListItem = Schemas["OrderAdminListItem"];
 export type CategoryAdmin = Schemas["CategoryAdminOut"];
@@ -79,6 +118,27 @@ export type GalleryItemAdmin = Schemas["GalleryItemAdminOut"];
 export type ReviewAdmin = Schemas["ReviewAdminOut"];
 export type AdminUser = Schemas["AdminOut"];
 export type Backup = Schemas["BackupOut"];
+export type CatalogSitemap = Schemas["CatalogSitemap"];
+export type BusinessClock = Schemas["BusinessClock"];
+// Главная админки (011b)
+export type AdminCounters = Schemas["Counters"];
+export type Dashboard = Schemas["Dashboard"];
+export type DashboardCalendar = Schemas["Calendar"];
+export type DashboardPlanItem = Schemas["PlanItem"];
+export type DashboardPopular = Schemas["PopularProduct"];
+export type AdminSearchResults = Schemas["SearchResults"];
+// Журнал и настройки (011c)
+export type ActivityItem = Schemas["ActivityItem"];
+export type JournalPage = Schemas["Page_ActivityItem_"];
+export type BakerySettings = Schemas["BakerySettings"];
+// Заказы и карточка товара (011d)
+export type OrderListPage = Schemas["OrderListPage"];
+export type OrderAdminDetail = Schemas["OrderAdminDetail"];
+export type CatalogFilterOptions = Schemas["CatalogFilters"];
+// Каталог, заявки, отзывы (011e)
+export type ProductAdminListItem = Schemas["ProductAdminListItem"];
+export type ConsultationListPage = Schemas["ConsultationListPage"];
+export type ReviewListPage = Schemas["ReviewListPage"];
 
 export class ApiError extends Error {
   constructor(
@@ -151,9 +211,47 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   return (await response.json()) as T;
 }
 
+/**
+ * Тег кэша для страниц контента: `/pages/contacts` → `contacts` (014).
+ *
+ * Контакты читают шапка (мобильное меню), подвал, каталог (`catalog_note`) и товар
+ * (строки «Самовывоз / Доставка»). Сбросить все эти страницы списком путей нельзя —
+ * товаров много, — поэтому ответ помечается тегом, и бэкенд после сохранения
+ * страницы в админке сбрасывает тег (`revalidateTag` в /api/revalidate).
+ * Так же `GET /catalog/categories` → `categories`.
+ */
+export function cacheTags(path: string): string[] {
+  const page = /^\/pages\/([a-z_]+)(?:[?#]|$)/.exec(path);
+  if (page) return [page[1]!];
+  // Разделы каталога — мега-меню шапки на каждой странице; бэкенд сбрасывает тег
+  // при любой правке каталога
+  if (/^\/catalog\/categories(?:[?#]|$)/.test(path)) return ["categories"];
+  // «Торты на заказ» (008b): дизайны, /info, начинки, расчёт — бэкенд сбрасывает тег
+  // при правке дизайна, начинки, текстов страницы и цен тортов в настройках
+  if (/^\/custom-cakes(?:[/?#]|$)/.test(path)) return ["custom_cakes"];
+  return [];
+}
+
 /** Запросы для серверных компонентов: ISR с ревалидацией по умолчанию. */
 export async function apiGet<T>(path: string, revalidate = 300): Promise<T> {
-  const response = await fetch(`${SERVER_API_URL}${path}`, { next: { revalidate } });
+  const response = await fetch(`${SERVER_API_URL}${path}`, {
+    next: { revalidate, tags: cacheTags(path) },
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, `Запрос ${path} вернул ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+/**
+ * Персональные запросы серверных компонентов: без кэша, с cookie посетителя.
+ * Корзина и страница заказа (007b) — их нельзя ни кэшировать, ни отдавать другому.
+ */
+export async function apiGetPrivate<T>(path: string, cookie?: string): Promise<T> {
+  const response = await fetch(`${SERVER_API_URL}${path}`, {
+    cache: "no-store",
+    headers: cookie ? { cookie } : {},
+  });
   if (!response.ok) {
     throw new ApiError(response.status, `Запрос ${path} вернул ${response.status}`);
   }
@@ -185,6 +283,47 @@ export const TAG_LABELS: Record<ProductTag, string> = {
   new: "Новинка",
   hit: "Хит",
   season: "Сезон",
+};
+
+/**
+ * Подписи ограничений и поводов. Тот же справочник отдаёт `GET /catalog/filters`,
+ * но карточке товара он нужен синхронно, без лишнего запроса на каждую сетку.
+ */
+export const DIETARY_LABELS: Record<DietaryTag, string> = {
+  gluten_free: "Без глютена",
+  lactose_free: "Без лактозы",
+  low_sugar: "Сниженный сахар",
+};
+
+export const RECIPIENT_LABELS: Record<Recipient, string> = {
+  her: "Для неё",
+  him: "Для него",
+  kids: "Для детей",
+};
+
+/** Подписи миниатюр на странице товара (макет 01-medovik-whole.png). */
+export const IMAGE_ROLE_LABELS: Record<ImageRole, string> = {
+  whole: "Целиком",
+  cut: "Срез",
+  detail: "Деталь",
+  package: "Упаковка",
+};
+
+export const OCCASION_LABELS: Record<Occasion, string> = {
+  birthday: "День рождения",
+  kids: "Детский",
+  wedding: "Свадьба",
+  corporate: "Корпоратив",
+  tea: "К чаю",
+  anniversary: "Юбилей",
+};
+
+export const REQUEST_OCCASION_LABELS: Record<RequestOccasion, string> = {
+  wedding: "Свадьба",
+  birthday: "День рождения",
+  kids: "Детский",
+  anniversary_corporate: "Юбилей и корпоратив",
+  other: "Другое",
 };
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {

@@ -7,8 +7,8 @@
 
 Дамп снимается `pg_dump` в формате custom (`-Fc`) — он уже сжат и позволяет
 восстанавливаться выборочно, в отличие от простого SQL-текста. Файл сразу
-уходит в объектное хранилище: локальный диск приложения на App Platform не
-переживает передеплой.
+хранится в закрытой схеме PostgreSQL backup_storage, исключённой из дампа.
+При явном выборе filesystem используется постоянный том приложения.
 """
 
 import asyncio
@@ -18,15 +18,15 @@ import tempfile
 from datetime import UTC, datetime
 from urllib.parse import urlparse
 
-from botocore.exceptions import ClientError
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.concurrency import run_in_threadpool
 
+from app.core import clock
 from app.core.config import get_settings
-from app.core.db import engine
-from app.models import BackupRecord, BackupStatus, BackupType
-from app.services.storage import StorageNotConfiguredError, _client
+from app.core.db import SessionLocal, engine
+from app.models import AdminSession, BackupRecord, BackupStatus, BackupType
+from app.services import bakery_settings, storage
+from app.services.storage import StorageNotConfiguredError
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def _connection_params() -> dict[str, str]:
     }
 
 
-async def _run(command: list[str], password: str, timeout: int) -> None:
+async def _run(command: list[str], password: str, timeout: int) -> bytes:
     env = {**os.environ, "PGPASSWORD": password}
 
     process = await asyncio.create_subprocess_exec(
@@ -72,7 +72,7 @@ async def _run(command: list[str], password: str, timeout: int) -> None:
     )
 
     try:
-        _, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
     except TimeoutError:
         process.kill()
         raise BackupError(f"Операция не завершилась за {timeout} секунд") from None
@@ -87,11 +87,23 @@ async def _run(command: list[str], password: str, timeout: int) -> None:
             stderr.decode(errors="replace")[:500],
         )
         raise BackupError("Не удалось выполнить операцию с базой данных")
+    return stdout
+
+
+def restore_table_list(toc: bytes) -> str:
+    """Даже старые дампы не возвращают строки сессий; схему таблицы сохраняем."""
+    return (
+        "\n".join(
+            line
+            for line in toc.decode("utf-8").splitlines()
+            if " TABLE DATA public admin_sessions " not in line
+        )
+        + "\n"
+    )
 
 
 async def create_backup(session: AsyncSession, backup_type: BackupType) -> BackupRecord:
-    """Снимает дамп и кладёт его в объектное хранилище."""
-    settings = get_settings()
+    """Снимает дамп и кладёт его в закрытое хранилище резервных копий."""
     params = _connection_params()
 
     record = BackupRecord(
@@ -130,6 +142,7 @@ async def create_backup(session: AsyncSession, backup_type: BackupType) -> Backu
                 params["dbname"],
                 "--format",
                 "custom",
+                "--exclude-schema=backup_storage",
                 "--no-owner",
                 "--no-privileges",
                 "--file",
@@ -141,15 +154,7 @@ async def create_backup(session: AsyncSession, backup_type: BackupType) -> Backu
 
         size = os.path.getsize(dump_path)
 
-        client = await run_in_threadpool(_client)
-        with open(dump_path, "rb") as dump_file:
-            await run_in_threadpool(
-                client.put_object,
-                Bucket=settings.s3_bucket,
-                Key=key,
-                Body=dump_file,
-                ContentType="application/octet-stream",
-            )
+        await storage.write_file(key, dump_path)
 
         record.storage_key = key
         record.size_bytes = size
@@ -182,19 +187,22 @@ async def restore_backup(session: AsyncSession, backup_id: int) -> None:
     if record is None or record.status is not BackupStatus.SUCCESS:
         raise BackupError("Копия не найдена или снята с ошибкой")
 
-    settings = get_settings()
     params = _connection_params()
 
     with tempfile.NamedTemporaryFile(suffix=".dump", delete=False) as tmp:
         dump_path = tmp.name
+    list_path = None
 
     try:
-        client = await run_in_threadpool(_client)
-        response = await run_in_threadpool(
-            client.get_object, Bucket=settings.s3_bucket, Key=record.storage_key
+        await storage.copy_to_file(record.storage_key, dump_path)
+        toc = await _run(
+            ["pg_restore", "--list", dump_path], password=params["password"], timeout=30
         )
-        with open(dump_path, "wb") as dump_file:
-            dump_file.write(response["Body"].read())
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=".list", delete=False
+        ) as table_list:
+            list_path = table_list.name
+            table_list.write(restore_table_list(toc))
 
         logger.warning(
             "ВОССТАНОВЛЕНИЕ базы из копии %s — текущие данные будут заменены", record.storage_key
@@ -227,17 +235,35 @@ async def restore_backup(session: AsyncSession, backup_id: int) -> None:
                 "--if-exists",
                 "--no-owner",
                 "--no-privileges",
+                "--single-transaction",
+                "--use-list",
+                list_path,
                 dump_path,
             ],
             password=params["password"],
             timeout=RESTORE_TIMEOUT_SECONDS,
         )
+        await invalidate_restored_sessions()
         logger.warning("База восстановлена из копии %s", record.storage_key)
 
     except StorageNotConfiguredError:
         raise BackupError("Хранилище не настроено") from None
     finally:
         os.unlink(dump_path)
+        if list_path is not None:
+            os.unlink(list_path)
+
+
+async def invalidate_restored_sessions() -> None:
+    """Старый дамп не должен возвращать доступ ранее отозванным токенам."""
+    async with SessionLocal() as db:
+        await db.execute(
+            update(AdminSession)
+            .where(AdminSession.revoked_at.is_(None))
+            .values(revoked_at=clock.utc_now())
+        )
+        await db.commit()
+    await bakery_settings.drop_cache()
 
 
 async def _terminate_other_connections(params: dict[str, str]) -> None:
@@ -281,28 +307,20 @@ async def reconcile(session: AsyncSession) -> None:
     if not pending:
         return
 
-    try:
-        client = await run_in_threadpool(_client)
-    except StorageNotConfiguredError:
-        return
-
-    settings = get_settings()
     changed = False
-
     for record in pending:
         if not record.storage_key:
             continue
         try:
-            head = await run_in_threadpool(
-                client.head_object, Bucket=settings.s3_bucket, Key=record.storage_key
-            )
-        except ClientError:
+            size = await storage.object_size(record.storage_key)
+        except (OSError, StorageNotConfiguredError, ValueError):
             continue
-
+        if size is None:
+            continue
         record.status = BackupStatus.SUCCESS
-        record.size_bytes = head.get("ContentLength")
+        record.size_bytes = size
         changed = True
-        logger.info("Статус копии %s восстановлен по файлу в хранилище", record.storage_key)
+        logger.info("Статус копии %s восстановлен по файлу", record.storage_key)
 
     if changed:
         await session.commit()

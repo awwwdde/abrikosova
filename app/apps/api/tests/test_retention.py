@@ -18,6 +18,7 @@ from app.models import (
     ConsultationSource,
     ConsultationStatus,
     Order,
+    OrderItem,
     OrderStatus,
 )
 from app.services import retention
@@ -43,9 +44,11 @@ async def _make_order(session, *, status: OrderStatus, created_at: datetime) -> 
         customer_name="Иван Тестовый",
         customer_phone="+79001234567",
         customer_comment="Позвонить заранее",
+        cancel_reason="Клиентка Мария передумала, номер +79001234567",
         delivery_method="delivery",
         delivery_address="Москва, ул. Тестовая, 1",
         consent_pd=True,
+        subtotal=Decimal("1000.00"),
         total_price=Decimal("1000.00"),
         status=status,
     )
@@ -72,6 +75,7 @@ async def test_old_completed_order_is_anonymized() -> None:
         assert refreshed.customer_phone == retention.ANONYMIZED_PHONE
         assert refreshed.customer_comment is None
         assert refreshed.delivery_address is None
+        assert refreshed.cancel_reason is None, "Причина отмены — свободный текст, тоже ПДн"
         # Сумма и статус нужны для истории продаж и не являются персональными
         assert refreshed.total_price == Decimal("1000.00")
 
@@ -153,3 +157,27 @@ async def test_purge_is_idempotent() -> None:
         if stale is not None:
             await session.delete(stale)
             await session.commit()
+
+
+async def test_inscription_is_erased_with_the_order(catalog) -> None:
+    """Надпись на табличке — свободный текст покупателя («Маше 5 лет»), это ПДн (005a)."""
+    async with SessionLocal() as session:
+        order = await _make_order(session, status=OrderStatus.COMPLETED, created_at=_old())
+        item = catalog.order_item("kids-cake", 1, "3800")
+        item.inscription_text = "Маше 5 лет"
+        item.inscription_price = Decimal("300")
+        item.order_id = order.id
+        session.add(item)
+        await session.commit()
+        order_id = order.id
+
+    async with SessionLocal() as session:
+        await retention.purge_expired(session)
+
+    async with SessionLocal() as session:
+        [item] = (
+            await session.scalars(select(OrderItem).where(OrderItem.order_id == order_id))
+        ).all()
+        assert item.inscription_text is None
+        # Цена надписи — не ПДн, сумма заказа остаётся объяснимой
+        assert item.inscription_price == Decimal("300.00")

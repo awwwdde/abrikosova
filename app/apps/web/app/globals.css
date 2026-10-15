@@ -1,39 +1,56 @@
 @import "tailwindcss";
+@import "./home-responsive.css";
 
 /*
-  Дизайн-токены проекта.
+  Дизайн-токены проекта — по макетам new/design/components.png и home-1512.png.
 
-  Палитра тёплая и сдержанная: продукт на фотографиях сам по себе яркий,
-  поэтому интерфейс работает фоном, а не спорит с ним за внимание.
-  Один акцентный цвет вместо набора — на нём только то, что действительно
-  ведёт к действию.
+  Значения сняты с PNG инструментально (Pillow: цвет пикселя, границы элементов,
+  подбор кегля по попиксельному совпадению отрисовки), таблица замеров —
+  tasks/003-report.md. Имена токенов семантические и не меняются: страницы и
+  админка ссылаются на них, меняются только значения.
 */
 @theme {
   /* Поверхности */
-  --color-canvas: oklch(98.6% 0.006 85);
-  --color-surface: oklch(100% 0 0);
-  --color-surface-sunken: oklch(96.6% 0.008 85);
+  --color-canvas: #fbf7f0; /* фон страницы */
+  --color-surface: #ffffff; /* формы и служебные карточки (в макете таких нет) */
+  --color-surface-sunken: #f2ece1; /* = photo: утопленные плашки */
+  --color-photo: #f2ece1; /* подложка фото в карточках товаров и работ */
+  --color-cream: #fbf7f0; /* светлая кнопка «ОТКРЫТЬ ВИТРИНУ» — на тёмном фоне */
+  --color-on-accent: #f3e5c8; /* логотип, телефон, текст плиток на бордо */
+  --color-night: #1a1210; /* тёмный фон вариантов «на тёмном» */
 
   /* Текст */
-  --color-ink: oklch(24% 0.014 60);
-  --color-ink-muted: oklch(48% 0.012 60);
-  --color-ink-subtle: oklch(62% 0.01 60);
+  --color-ink: #1a1210; /* заголовки, названия, меню, цена */
+  --color-ink-muted: #5a524f; /* подзаголовок секции, состав, «ярусы · вес · гости» */
+  --color-ink-subtle: #918f8b; /* мета под составом: «классика · 100 г» */
 
   /* Границы */
-  --color-line: oklch(90% 0.008 70);
-  --color-line-strong: oklch(82% 0.01 70);
+  --color-line: #e5dccb; /* разделитель в карточке, обводка «+» и стрелок */
+  --color-line-strong: #ccc3b3; /* поля ввода: на макете нет, темнее line на шаг */
 
-  /* Акцент */
-  --color-accent: oklch(44% 0.106 25);
-  --color-accent-hover: oklch(38% 0.106 25);
-  --color-accent-soft: oklch(95% 0.022 30);
+  /* Акцент — бордо */
+  --color-accent: #842124;
+  --color-accent-hover: #6e1b1e; /* = pressed: плитка «Все 25 работ», нажатая кнопка */
+  --color-accent-pressed: #6e1b1e;
+  --color-accent-soft: #f4eae3; /* подложка ошибок в формах */
 
-  --color-danger: oklch(48% 0.16 27);
+  --color-danger: #842124; /* ошибки — тем же бордо: второго красного в палитре нет */
 
   /*
-    Типографика. Дисплейные размеры заданы через clamp: на широком экране
-    заголовок работает как плакат, на телефоне не разваливается на переносы.
-    Промежуточные значения считает браузер — брейкпоинты для этого не нужны.
+    Шрифты подключаются через next/font в app/layout.tsx (переменные
+    --font-forum и --font-manrope на <html>). Forum — заголовки и названия
+    позиций (узнаётся по «л» и «д»), Manrope — интерфейс, текст и цены.
+  */
+  --font-display: var(--font-forum), "Times New Roman", serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+
+  /*
+    Шкала кеглей по замерам с макета 1512 (px в комментарии). Размеры
+    фиксированные — по решению заказчика они не растут с шириной окна, шире
+    1512 растёт только ширина. Мобильные значения крупных кеглей — ниже,
+    в @media (max-width: 1023px): мобильного макета нет, а 87px на телефоне
+    не помещается. Старые имена text-2xs…text-5xl оставлены для существующих
+    страниц.
   */
   --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
@@ -46,33 +63,184 @@
   --text-4xl: clamp(2.75rem, 1.3rem + 4.4vw, 5rem);
   --text-5xl: clamp(3.25rem, 1rem + 6.6vw, 7rem);
 
-  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* h1 героя: Forum 87, шаг строк 90 */
+  --text-hero: 5.4375rem;
+  --text-hero--line-height: 1.035;
+  /* заголовок секции «Готово сегодня»: Forum 58 */
+  --text-section: 3.625rem;
+  --text-section--line-height: 1.1;
+  /* название позиции/работы, текст плитки: Forum 32 */
+  --text-item: 2rem;
+  --text-item--line-height: 1.15;
+  /* абзац героя: Manrope 22/300, шаг строк 30 */
+  --text-lead: 1.375rem;
+  --text-lead--line-height: 1.875rem;
+  /* подзаголовок секции: Manrope 20/300 (1512.png); пункты меню и телефон — 17.5/400 */
+  --text-subtitle: 1.25rem;
+  --text-subtitle--line-height: 1.5;
+  --text-nav: 1.09375rem;
+  --text-nav--line-height: 1.5rem;
+  /* состав (400) и мета (300) в карточке: Manrope 14, шаг строк 24 */
+  --text-meta: 0.875rem;
+  --text-meta--line-height: 1.5rem;
+  /* цена: Manrope 24/700 */
+  --text-price: 1.5rem;
+  --text-price--line-height: 1.25;
+  /* метка «БЕЗ ГЛЮТЕНА»: 11, капс */
+  --text-tag: 0.6875rem;
+  --text-tag--line-height: 1;
+  /* подпись работы «СВАДЬБА · АВГУСТ 2025»: 12, капс */
+  --text-caps: 0.75rem;
+  --text-caps--line-height: 1;
+  /* бегущая строка: 17, капс */
+  --text-marquee: 1.0625rem;
+  --text-marquee--line-height: 1;
+  /* кнопки: большая — 20 капс, средняя — 16, в шапке — 16/300 капс */
+  --text-button-lg: 1.25rem;
+  --text-button-lg--line-height: 1;
+  --text-button: 1rem;
+  --text-button--line-height: 1;
 
-  /* Радиусы: концентричные пары, а не случайные значения */
+  /* Трекинг капса — по бегущей строке, меткам и подписям работ */
+  --tracking-tag: 0.12em;
+  --tracking-marquee: 0.15em;
+  --tracking-caps: 0.14em;
+  --tracking-ready: 0.1em;
+  --tracking-price: 0;
+
+  /*
+    Радиусы. Кнопки, фото и карточки на макете прямоугольные; малое
+    скругление ~4px есть только у плиток-концовок и выбранных чипов.
+  */
   --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
 
-  /* Тени — слоистые и прозрачные, чтобы работать на любом фоне */
-  --shadow-raised:
-    0 1px 1px rgb(60 40 30 / 0.04), 0 2px 4px rgb(60 40 30 / 0.04),
-    0 8px 16px -8px rgb(60 40 30 / 0.06);
-  --shadow-hover:
-    0 1px 1px rgb(60 40 30 / 0.05), 0 4px 8px rgb(60 40 30 / 0.06),
-    0 16px 28px -12px rgb(60 40 30 / 0.1);
-  --shadow-header: 0 1px 0 rgb(60 40 30 / 0.06), 0 8px 24px -16px rgb(60 40 30 / 0.18);
+  /* Теней в макете нет. Имена оставлены, чтобы старые классы не ломались. */
+  --shadow-raised: 0 0 #0000;
+  --shadow-hover: 0 0 #0000;
+  --shadow-header: 0 0 #0000;
+
+  /*
+    Боковые поля страницы: 48px от 1280, 40px на 1024–1279,
+    32px на планшете и 16px на телефоне (ниже — в @media после @theme).
+  */
+  --spacing-page-gutter: 3rem;
+
+  /*
+    Админка — утверждённый концепт new/design/admin/README.md (01.10.2026).
+    Отдельные имена: у админки своя шкала (скругления 12/14/28, светлые подложки),
+    и сайт от её правок меняться не должен.
+  */
+  --color-admin-side: #842124; /* рамка входа, боковая панель, основные кнопки */
+  --color-admin-panel: #f6f0e8; /* подложка контента и панели входа */
+  --color-admin-card: #fffdf9; /* карточки и поля — чистого белого в админке нет */
+  --color-admin-line: #ede4d6; /* разделители внутри карточек */
+  --color-admin-field: #e0d4c4; /* рамка поля */
+  --color-admin-muted: #6b625e; /* вторичный текст, иконки в полях */
+  --color-admin-soft: #f4e6e0; /* мягкая бордовая подложка: ошибки, блокировка */
+  --color-admin-amber: #8a5a12;
+  --color-admin-amber-soft: #f7ecd6; /* предупреждения: «Включён Caps Lock» */
+  --color-admin-photo: #f1e8dc; /* подложка фото, пока оно грузится */
+  --color-admin-disabled: #e5dacb;
+  --color-admin-disabled-ink: #8c827b;
+  --color-admin-hover: #6e1b1e; /* наведение на основную кнопку */
+  /* 011b: остальная палитра концепта */
+  --color-admin-ink: #1a1210; /* основной текст */
+  --color-admin-ink-soft: #3e3633; /* текст отзыва */
+  --color-admin-faint: #b7ada6; /* разделитель крошек, неактивные дни календаря */
+  --color-admin-dash: #d9ccba; /* пунктир «Показать ещё» */
+  --color-admin-cream: #f3e5c8; /* счётчики в меню, аватары */
+  --color-admin-side-text: rgb(251 247 240 / 0.78); /* пункты меню на бордо */
+  /* подписи групп меню: в концепте .5, но это ~3:1 на бордо — для 11px мало (axe), .66 даёт ~4.8:1 */
+  --color-admin-side-group: rgb(251 247 240 / 0.66);
+  --color-admin-side-ink: #fbf7f0; /* пункт меню при наведении */
+  --color-admin-green: #2f7a3e;
+  --color-admin-green-soft: #e3f1e4;
+  --color-admin-blue: #2b4c6f; /* только статус «Готовится» */
+  --color-admin-blue-soft: #e6eef6;
+  --color-admin-grey-soft: #efe9e1; /* «Выдан», «Отменён», «Опубликован» */
+  --color-admin-gold: #c9954a; /* второй цвет графиков, звёзды отзывов */
+  --color-admin-rose: #e3c9c3; /* третий цвет графиков, фон столбиков */
+  --shadow-admin-card: 0 1px 2px rgb(80 40 30 / 0.05), 0 8px 24px rgb(80 40 30 / 0.06);
+  --shadow-admin-hover: 0 1px 2px rgb(80 40 30 / 0.06), 0 10px 28px rgb(80 40 30 / 0.1);
+  --shadow-admin-button: 0 8px 20px rgb(132 33 36 / 0.25);
+  --shadow-admin-focus: 0 0 0 3px rgb(132 33 36 / 0.12);
+  /* Скругления концепта: подложка 28, карточки и строки 14, кнопки и поля 12, мелкие 10 */
+  --radius-admin-panel: 1.75rem;
+  --radius-admin-card: 0.875rem;
+  --radius-admin-control: 0.75rem;
+  --radius-admin-small: 0.625rem;
+
+  /* Кривая для интерфейсных переходов */
+  --ease-out-soft: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/*
+  Поля и крупные кегли на узких экранах. Переопределяем переменные темы, а не
+  утилиты: все места, которые берут поле или кегль из токена, подстраиваются сами.
+*/
+:root {
+  --page-gutter: var(--spacing-page-gutter);
+  /*
+    Высота шапки на десктопе: наверху страницы и после прокрутки. Менять здесь —
+    от этих чисел зависят и шапка, и распорка под ней, и отступ героя.
+  */
+  --header-h: 130px;
+  --header-h-compact: 118px;
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  :root {
+    --spacing-page-gutter: 2.5rem;
+    /* Заголовок героя 87px в строку «по авторским рецептурам» шире 928px контента */
+    --text-hero: 4.5rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --spacing-page-gutter: 2rem;
+    --text-hero: 3rem;
+    --text-section: 2.25rem;
+  }
+}
+
+@media (max-width: 639px) {
+  :root {
+    --spacing-page-gutter: 1rem;
+    --text-hero: 2.5rem;
+    --text-section: 2rem;
+  }
 }
 
 @layer base {
-  html {
-    scroll-behavior: smooth;
+  /*
+    Курсор-указатель на всём кликабельном. В preflight Tailwind 4 у button курсор
+    default (в v3 был pointer) — возвращаем поведение v3 одним правилом, как советует
+    документация, а не классом на каждой кнопке. Отключённые — без указателя.
+  */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for],
+  /* label с полем внутри и без for — «Согласен на обработку данных» в формах.
+     textarea и select — чтобы подписи всех полей вели себя одинаково; сам чекбокс
+     и радио — тоже указатель (браузер ставит им стрелку) */
+  label:has(input:not(:disabled), textarea:not(:disabled), select:not(:disabled)),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  select {
+    cursor: pointer;
   }
 
   body {
+    /* Карусели выходят за правый край контейнера до края окна; 100vw включает
+       полосу прокрутки, и без clip страница получала бы горизонтальный скролл.
+       clip, а не hidden: не создаёт контейнер прокрутки и не ломает sticky. */
+    overflow-x: clip;
     background-color: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -84,17 +252,11 @@
   h1,
   h2,
   h3 {
+    /* У Forum одно начертание — 400; синтетический «жирный» портит рисунок букв */
     font-family: var(--font-display);
-    font-weight: 500;
-    /* Чем крупнее кегль, тем плотнее должны стоять буквы и строки */
-    letter-spacing: -0.025em;
-    line-height: 1.02;
+    font-weight: 400;
+    line-height: 1.1;
     text-wrap: balance;
-  }
-
-  h3 {
-    letter-spacing: -0.01em;
-    line-height: 1.2;
   }
 
   p {
@@ -125,22 +287,13 @@
     Одна ширина и одни поля на всех страницах.
   */
   .container-page {
+    /*
+      По решению заказчика ширина не ограничена: контент тянется на всё окно,
+      поля — токен --page-gutter (48px на 1512, как в макете). Шире 1512
+      растёт только ширина, размеры элементов остаются как на макете.
+    */
     width: 100%;
-    max-width: 110rem;
-    margin-inline: auto;
-    padding-inline: 1.25rem;
-  }
-
-  @media (min-width: 768px) {
-    .container-page {
-      padding-inline: 2.5rem;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .container-page {
-      padding-inline: 4rem;
-    }
+    padding-inline: var(--page-gutter);
   }
 
   /* Вертикальный ритм секций — кратен одному шагу, а не подобран вручную */
@@ -155,10 +308,19 @@
   }
 
   .eyebrow {
-    font-size: var(--text-2xs);
-    letter-spacing: 0.14em;
+    font-size: var(--text-caps);
+    font-weight: 600;
+    letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
-    color: var(--color-ink-subtle);
+    color: var(--color-accent);
+  }
+
+  /* Горизонтальная лента без видимой полосы прокрутки (карусели) */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   /*
@@ -194,8 +356,32 @@
     position: relative;
     overflow: hidden;
     border-radius: var(--radius-xl);
-    background-color: var(--color-surface);
-    box-shadow: var(--shadow-raised);
+    background-color: var(--color-photo);
+  }
+}
+
+/*
+  Бегущая строка главной: две копии ленты подряд, сдвиг на половину —
+  конец анимации совпадает с началом, шва не видно. Половина ленты ~4500px
+  (пункты повторены трижды), 120 с на круг — те же ~40px/с.
+*/
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  animation: ticker 120s linear infinite;
+}
+
+.ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
   }
 }
 
@@ -207,4 +393,184 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+  Появление при прокрутке (задание 004d, тайминги — lib/motion.ts).
+
+  Скрытое начальное состояние — только у элементов с data-pending: его ставит JS
+  при монтировании и только тем, что ниже первого экрана (009, lib/motion.ts
+  onReveal). До гидрации, без JS и при reduce всё видно сразу — первый экран не
+  ждёт анимацию, LCP считается с первой отрисовки. Страховка html.js / 3 с осталась. После проигрывания элемент получает data-shown
+  и больше не скрывается, даже если React перерисует его содержимое. На время
+  возврата по истории (html.reveal-instant) ничего не скрывается: страница
+  показывается сразу такой, какой её уже видели.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  .js:not(.reveal-instant) [data-reveal="fade"][data-pending]:not([data-shown]),
+  .js:not(.reveal-instant) [data-reveal="group"][data-pending]:not([data-shown]) > * {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  .js:not(.reveal-instant) [data-reveal="text"][data-pending]:not([data-shown]) .reveal-line {
+    transform: translateY(110%);
+  }
+
+  .js:not(.reveal-instant) [data-reveal="image"][data-pending]:not([data-shown]) {
+    clip-path: inset(100% 0 0 0);
+  }
+
+  .js:not(.reveal-instant)
+    [data-reveal="image"][data-pending]:not([data-shown])
+    [data-reveal-zoom] {
+    transform: scale(1.08);
+  }
+
+  .js:not(.reveal-instant) [data-reveal="line"][data-pending]:not([data-shown]) {
+    transform: scaleX(0);
+  }
+
+  /* Герой (009, 006b): до гидрации текст стоит на месте и виден — это LCP. Анимацию
+     включает Hero атрибутом data-hero-anim после гидрации. Строки не уходят под маску,
+     а коротко выезжают на 30 % высоты, как RevealText в первом экране: текст виден
+     всё время, поэтому анимация безопасна в любой момент. Подзаголовок и кнопка —
+     сдвигом на 16px */
+  [data-hero-anim] .hero-line {
+    animation: reveal-line-short 0.9s var(--ease-out-soft) both;
+    animation-delay: calc(0.05s + var(--i, 0) * 0.08s);
+  }
+
+  [data-hero-anim] .hero-fade {
+    animation: reveal-shift 0.7s var(--ease-out-soft) both;
+    animation-delay: var(--delay, 0.35s);
+  }
+
+  /* Возврат по истории: герой уже был показан — не проигрываем заново */
+  .reveal-instant .hero-line,
+  .reveal-instant .hero-fade {
+    animation: none;
+  }
+}
+
+/*
+  Маска строки. Режет clip-path, а не overflow: у clip-path отрицательный inset
+  расширяет видимую область за пределы строки — на 0,2em сверху и снизу, чтобы
+  не срезать выносные элементы Forum («у», «д», «р», «Й»), — и при этом никак не
+  влияет на раскладку (с padding и отрицательным margin поля соседних строк
+  схлопывались бы). Спрятанная строка сдвинута на 110 % своей высоты — ниже запаса.
+*/
+.reveal-mask {
+  display: block;
+  clip-path: inset(-0.2em -0.1em);
+}
+
+/*
+  Строка переносится как обычный текст, а не nowrap: неразрывная строка задавала
+  min-content ширину родителя, flex/grid-колонка росла вместе с ней, и строка уходила
+  за край окна (004e). В худшем случае — лишний перенос на кадр до пересчёта строк.
+*/
+.reveal-line {
+  display: block;
+}
+
+[data-reveal="line"] {
+  transform-origin: left;
+}
+
+@keyframes reveal-line-short {
+  from {
+    transform: translateY(30%);
+  }
+}
+
+@keyframes reveal-shift {
+  from {
+    transform: translateY(16px);
+  }
+}
+
+/*
+  Брейкпоинты админки в px (011g). Встроенные sm…2xl Tailwind заданы в rem, а rem в
+  медиазапросе — это размер шрифта браузера по умолчанию, и CSS его не переопределит
+  (admin-scope ниже на медиазапросы не действует). При шрифте 13px вместо 16 «2xl»
+  (96rem) срабатывал на 1248px вместо 1536, «lg» — на 832: админка, свёрстанная
+  в px, переключала раскладку не на тех ширинах. Сайт остаётся на rem-брейкпоинтах.
+  Порядок объявления важен: более широкие min- и более узкие max- идут позже.
+*/
+@custom-variant adm-sm (@media (width >= 640px));
+@custom-variant adm-md (@media (width >= 768px));
+@custom-variant adm-lg (@media (width >= 1024px));
+@custom-variant adm-xl (@media (width >= 1280px));
+@custom-variant adm-2xl (@media (width >= 1536px));
+@custom-variant max-adm-2xl (@media (width < 1536px));
+@custom-variant max-adm-xl (@media (width < 1280px));
+@custom-variant max-adm-lg (@media (width < 1024px));
+@custom-variant max-adm-md (@media (width < 768px));
+@custom-variant max-adm-sm (@media (width < 640px));
+
+/*
+  Админка (011g): шкала в пикселях, а не в rem.
+
+  Концепт админки задан в px: меню 256, переключатель 42×24, кегли 13.5–15. Текст
+  в ките — px (text-[14.5px]), а отступы, высоты и скругления Tailwind считает от
+  rem. Если в браузере изменён размер шрифта по умолчанию (у заказчика ~13px вместо
+  16 — настройка Chrome/Яндекс Браузера или Windows), rem-размеры сжимались, а px-
+  размеры — нет: меню становилось 208px при тексте 14.5px, и подписи переносились;
+  дорожка переключателя h-6 становилась 20px при бегунке 18px.
+
+  Здесь переопределяются токены, от которых считаются утилиты (--spacing, кегли
+  text-xs…lg, скругления админки), — внутри админки они больше не зависят от rem.
+  Масштаб страницы (Ctrl +/−, масштаб Windows) по-прежнему работает: он
+  увеличивает и px. Сайт этим не затронут — класс стоит только на корне админки.
+*/
+.admin-scope {
+  --spacing: 4px;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --radius-sm: 4px;
+  --radius-admin-panel: 28px;
+  --radius-admin-card: 14px;
+  --radius-admin-control: 12px;
+  --radius-admin-small: 10px;
+  font-size: 16px;
+}
+
+/*
+  Активный пункт меню «врастает» в кремовую подложку (011b, переделано в 011g).
+  Заливка — отдельный слой `.admin-nav-fill` под содержимым пункта: пункт не
+  меняет размеров, поэтому иконка, текст и счётчик стоят на тех же x, что и у
+  неактивных. Слой доходит до края меню и продолжается в подложку.
+
+  Выгнутые уголки сверху и снизу — квадрат цвета подложки с SVG-маской: остаётся
+  только «вогнутый» кусок вне дуги радиуса 22. Сглаживается одна дуга, прямых
+  краёв на бордовой стороне нет. Раньше был radial-gradient (зубцы на дробном
+  масштабе), затем box-shadow — на 125 % и 150 % по прямому краю тени проступала
+  светлая линия в 1px. Квадрат на 1px заходит в заливку пункта, чтобы на дробном
+  DPR между ними не было щели. Проверено на DPR 1, 1,25, 1,5, 2.
+*/
+.admin-nav-fill::before,
+.admin-nav-fill::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 22px;
+  height: 23px;
+  pointer-events: none;
+  background: var(--color-admin-panel);
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+}
+
+.admin-nav-fill::before {
+  bottom: calc(100% - 1px);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 23'%3E%3Cpath d='M22 0V23H0V22A22 22 0 0 0 22 0Z'/%3E%3C/svg%3E");
+}
+
+.admin-nav-fill::after {
+  top: calc(100% - 1px);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 23'%3E%3Cpath d='M0 0H22V23A22 22 0 0 0 0 1Z'/%3E%3C/svg%3E");
 }

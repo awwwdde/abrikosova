@@ -8,13 +8,17 @@
 """
 
 import uuid
+from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
 from app.models.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.catalog import ProductVariant
 
 
 class Cart(Base, TimestampMixin):
@@ -31,16 +35,36 @@ class Cart(Base, TimestampMixin):
 
 
 class CartItem(Base):
+    """Строка корзины: вариант товара + надпись на табличке.
+
+    Тот же товар другим весом или с другой надписью — отдельная строка: это
+    разные изделия для кухни. Одинаковые вариант и надпись складываются в одну
+    строку (NULLS NOT DISTINCT — две строки «без надписи» тоже считаются одной).
+    """
+
     __tablename__ = "cart_items"
-    __table_args__ = (UniqueConstraint("cart_id", "product_id", name="uq_cart_item_product"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "cart_id",
+            "variant_id",
+            "inscription_text",
+            name="uq_cart_item_variant_inscription",
+            postgresql_nulls_not_distinct=True,
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cart_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("carts.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    product_id: Mapped[int] = mapped_column(
-        ForeignKey("products.id", ondelete="CASCADE"), nullable=False
+    # Удалили вариант — строка корзины уходит вместе с ним: купить его уже нельзя
+    variant_id: Mapped[int] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Цены надписи здесь нет: она берётся из настроек на момент показа корзины
+    # и оформления заказа, как и цена варианта (ревью 005a)
+    inscription_text: Mapped[str | None] = mapped_column(String(30))
 
     cart: Mapped["Cart"] = relationship(back_populates="items")
+    variant: Mapped["ProductVariant"] = relationship()

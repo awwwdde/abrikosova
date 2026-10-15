@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: abrikosova
       POSTGRES_DB: abrikosova
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,15 +24,15 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "${REDIS_HOST_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  # S3-совместимое хранилище только для локальной разработки.
-  # На проде вместо него — S3 Object Storage Timeweb Cloud, код тот же.
+  # Прежний MinIO сохранён только для миграции. Обычный запуск его не поднимает;
+  # приложение использует media_data. После переноса старый том не удаляем.
   #
   # Образ не официальный: MinIO прекратил публикацию community-образов
   # (minio/minio на Docker Hub больше не скачивается, quay.io отвечает 401).
@@ -43,14 +43,15 @@ services:
   # https://hub.docker.com/r/pgsty/minio/tags, поменять тег здесь, выполнить
   # `docker compose up -d minio` и убедиться, что сервис стал healthy.
   minio:
+    profiles: ["legacy-media"]
     image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "${S3_HOST_PORT:-9000}:9000"
-      - "${S3_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${S3_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${S3_CONSOLE_PORT:-9001}:9001"
     volumes:
       - miniodata:/data
     healthcheck:
@@ -60,6 +61,8 @@ services:
       retries: 10
 
   api:
+    # Тот же UID, что в production: файлы тома доступны после смены образа.
+    user: "1001:1001"
     build:
       context: ./apps/api
       target: dev
@@ -68,12 +71,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://abrikosova:abrikosova@postgres:5432/abrikosova
       REDIS_URL: redis://redis:6379/0
-      # Внутри сети — имя сервиса, наружу изображения отдаются по порту хоста
-      S3_ENDPOINT_URL: http://minio:9000
-      S3_PUBLIC_URL: http://localhost:${S3_HOST_PORT:-9000}/abrikosova
-      S3_BUCKET: abrikosova
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
+      MEDIA_ROOT: /var/lib/abrikosova/media
       # Сброс ISR-кэша фронтенда после правок в админке
       WEB_REVALIDATE_URL: http://web:3000/api/revalidate
       REVALIDATE_SECRET: ${REVALIDATE_SECRET:?REVALIDATE_SECRET не задан в app/.env}
@@ -81,18 +79,17 @@ services:
     command: >
       sh -c "alembic upgrade head &&
              python -m app.seed &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-proxy-headers --reload"
     ports:
-      - "${API_HOST_PORT:-8000}:8000"
+      - "127.0.0.1:${API_HOST_PORT:-8000}:8000"
     volumes:
       - ./apps/api:/srv
+      - media_data:/var/lib/abrikosova/media
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
 
   web:
     build:
@@ -102,14 +99,18 @@ services:
       - ./apps/web/.env
     environment:
       API_URL: http://api:8000/api/v1
+      # Bind mount на Windows (Docker Desktop) не всегда доносит до контейнера события
+      # файловой системы: новые файлы и перезаписанные целиком next dev не замечал.
+      # Опрос диска медленнее событий, но изменения видны всегда.
+      WATCHPACK_POLLING: "true"
       # Адрес для браузера должен совпадать с портом, проброшенным на хост
       NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-8000}/api/v1
-      # Браузер ходит за картинками на сам сайт, Next проксирует в MinIO
+      # Браузер получает медиа с сайта; API разрешает только публичные каталоги.
       NEXT_PUBLIC_MEDIA_URL: /media
-      MEDIA_INTERNAL_URL: http://minio:9000/abrikosova
+      MEDIA_INTERNAL_URL: http://api:8000/media
       REVALIDATE_SECRET: ${REVALIDATE_SECRET:?REVALIDATE_SECRET не задан в app/.env}
     ports:
-      - "${WEB_HOST_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
     volumes:
       - ./apps/web:/srv
       - /srv/node_modules
@@ -120,3 +121,4 @@ services:
 volumes:
   pgdata:
   miniodata:
+  media_data:

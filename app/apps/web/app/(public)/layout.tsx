@@ -1,11 +1,5 @@
-import { Footer, Header } from "@/components/layout";
+import { PublicShell } from "@/components/public-shell";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
-    </div>
-  );
+  return <PublicShell>{children}</PublicShell>;
 }

@@ -6,6 +6,7 @@
 """
 
 import logging
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_session
 from app.core.security import TokenError, decode_token
 from app.models import AdminRole, AdminUser
+from app.services import sessions
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +45,15 @@ async def get_current_admin(
 
     try:
         admin_id = int(payload["sub"])
+        session_id = uuid.UUID(payload["sid"])
     except (KeyError, TypeError, ValueError):
+        # Токен без sid выписан до серверных сессий (задание 011a) — не принимаем
         raise UNAUTHORIZED from None
+
+    # Сессия не отозвана и не истекла: «выйти везде», смена пароля и деактивация
+    # действуют сразу, а не через 15 минут жизни access-токена
+    if not await sessions.check_alive(session, str(session_id), admin_id):
+        raise UNAUTHORIZED
 
     admin = await session.get(AdminUser, admin_id)
     # Проверяем пользователя в БД на каждом запросе: иначе деактивированный
@@ -53,6 +62,7 @@ async def get_current_admin(
         raise UNAUTHORIZED
 
     request.state.admin = admin
+    request.state.session_id = session_id
     return admin
 
 

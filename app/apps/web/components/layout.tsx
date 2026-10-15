@@ -1,241 +1,404 @@
 "use client";
 
+/**
+ * Шапка публичной части (подвал — components/footer.tsx).
+ *
+ * Шапка — по макету (components.png, три полосы сверху; 1512.png): логотип,
+ * меню из пяти пунктов, «Корзина N», телефон и кнопка «ЗАКАЗАТЬ ТОРТ».
+ * Рейтинга, поиска и часов работы в макете нет — и здесь их нет.
+ *
+ * Высота — токены `--header-h` (130px наверху страницы) и `--header-h-compact`
+ * (118px после прокрутки на 40px, вариант `light`): заказчик после ревью 003
+ * опустил верхнюю высоту со 160 до 130. Наверху на главной
+ * шапка прозрачная поверх героя (элемент с `data-hero`), ниже героя — `light`.
+ * На всех внутренних страницах — бордовая (`accent`) и сразу 118px: так в макетах
+ * каталога (005b) и во всех макетах 09.10 (010b), включая страницу товара.
+ *
+ * Чтобы смена высоты не двигала контент, шапка `fixed`, а место под неё
+ * держит пустой блок высоты `--header-h` (на главной с героем — 0:
+ * герой уходит под прозрачную шапку).
+ *
+ * Координаты по горизонтали сняты с макета 1512: логотип 161px от поля,
+ * меню от x=300 с шагом 40px, справа «Корзина» → 32px → телефон → 32px →
+ * кнопка 201×52. По вертикали всё по центру в обеих высотах.
+ *
+ * Мега-меню (014, кадры home.png): «Каталог ⌄» и «Торты на заказ ⌄» — шаблон
+ * disclosure navigation: `button aria-expanded aria-controls`, внутри обычные
+ * ссылки, без role="menu". Открываются кликом (не наведением), Enter/пробелом;
+ * Esc закрывает и возвращает фокус на пункт. Пока меню открыто, шапка светлая
+ * (вариант `light`), под ней затемнение страницы. Закрывают меню клик вне его,
+ * переход по ссылке, Esc и прокрутка больше 80px. До гидрации (и без JS)
+ * пункты — обычные ссылки на /catalog и /custom-cakes.
+ *
+ * Полная шапка — с 1024 (кадр 1194: без телефона, мельче), ниже — бургер
+ * и мобильное меню (components/site-header/mobile-menu.tsx).
+ */
+
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart-context";
+import { Logo } from "@/components/logo";
+import { NAV_LINKS } from "@/components/nav-links";
+import { BagIcon, Chevron } from "@/components/site-header/icons";
+import { CakesPanel, CatalogPanel } from "@/components/site-header/mega-panels";
+import type { HeaderMenuData } from "@/components/site-header/menu-data";
+import { MobileMenu } from "@/components/site-header/mobile-menu";
+import { formatPhone, typograf } from "@/lib/format";
 
-const NAV_LINKS = [
-  { href: "/catalog", label: "Каталог" },
-  { href: "/custom-cakes", label: "Торты на заказ" },
-  { href: "/gallery", label: "Работы" },
-  { href: "/about", label: "О нас" },
-  { href: "/contacts", label: "Контакты" },
-];
+export type HeaderVariant = "transparent" | "accent" | "light";
 
-function CartIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path
-        d="M3 5h1.6l1.7 8.4a1.4 1.4 0 0 0 1.4 1.1h6.5a1.4 1.4 0 0 0 1.4-1.1L17 7.5H5.4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="8.5" cy="17" r="1.1" fill="currentColor" />
-      <circle cx="14.5" cy="17" r="1.1" fill="currentColor" />
-    </svg>
-  );
+const THEMES: Record<
+  HeaderVariant,
+  { bar: string; logo: string; nav: string; secondary: string; button: string }
+> = {
+  light: {
+    bar: "bg-canvas",
+    logo: "text-ink",
+    nav: "text-ink hover:text-accent",
+    secondary: "text-ink hover:text-accent",
+    button: "border-ink text-ink hover:border-accent hover:bg-accent hover:text-white",
+  },
+  // Пункты меню обычного начертания, текущий раздел — полужирный (005b) и
+  // подчёркнутый (макеты 09.10: «О нас», «Контакты»). Страница внутри раздела
+  // (товар в «Каталоге», 006b) — полужирный пункт без подчёркивания: aria-current="true"
+  accent: {
+    bar: "bg-accent",
+    logo: "text-on-accent",
+    nav: "font-normal text-white hover:text-on-accent aria-[current=page]:font-semibold aria-[current=page]:text-white aria-[current=page]:underline aria-[current=page]:underline-offset-2 aria-[current=true]:font-semibold aria-[current=true]:text-white",
+    secondary: "font-normal text-on-accent hover:text-white",
+    button: "border-on-accent text-on-accent hover:bg-on-accent hover:text-accent",
+  },
+  transparent: {
+    bar: "bg-transparent",
+    // Ниже 1280 — кремовый on-accent, как в кадрах главной 1194/834/390 (014);
+    // с 1280 — белый и светлый, как в кадре 1512
+    logo: "text-on-accent xl:text-canvas",
+    nav: "text-on-accent xl:text-white hover:text-on-accent",
+    // Ниже 1280 — без прозрачности: так «Корзина N» и бургер читаются на светлых
+    // кадрах видео (решение по ревью 004b); с 1280 — как в макете
+    secondary: "text-on-accent xl:text-canvas/80 hover:text-white",
+    button:
+      "border-on-accent text-on-accent xl:border-line xl:text-canvas hover:border-accent hover:bg-accent hover:text-white",
+  },
+};
+
+/**
+ * Бордовая шапка постоянной высоты 118px — всё, кроме главной (решение 09.10):
+ * правило, а не список разделов, чтобы новая страница не осталась со светлой шапкой.
+ */
+function isAccentPath(pathname: string): boolean {
+  return pathname !== "/";
 }
 
-function MenuIcon({ open }: { open: boolean }) {
-  // Обе иконки в DOM и кросс-фейдятся: так у переключения есть и вход, и выход
-  return (
-    <span className="relative block size-4">
-      <svg
-        viewBox="0 0 16 16"
-        fill="none"
-        className="absolute inset-0 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]"
-        style={{
-          opacity: open ? 0 : 1,
-          scale: open ? "0.25" : "1",
-          filter: open ? "blur(4px)" : "blur(0px)",
-        }}
-        aria-hidden="true"
-      >
-        <path
-          d="M2 4h12M2 8h12M2 12h12"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      </svg>
-      <svg
-        viewBox="0 0 16 16"
-        fill="none"
-        className="absolute inset-0 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]"
-        style={{
-          opacity: open ? 1 : 0,
-          scale: open ? "1" : "0.25",
-          filter: open ? "blur(0px)" : "blur(4px)",
-        }}
-        aria-hidden="true"
-      >
-        <path
-          d="M3.5 3.5l9 9M12.5 3.5l-9 9"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
-  );
-}
+/** После какой прокрутки шапка сжимается до 118px (поправка заказчика: ~40px). */
+const COMPACT_AFTER = 40;
 
-export function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
+function usePageState(pathname: string, enabled: boolean) {
+  // На главной с первого рендера считаем, что герой есть: иначе после гидрации
+  // контент прыгнул бы вверх на высоту шапки. Если героя нет — снимаем наложение.
+  const [overlay, setOverlay] = useState(enabled && pathname === "/");
+  const [overHero, setOverHero] = useState(enabled && pathname === "/");
   const [scrolled, setScrolled] = useState(false);
-  const { cart } = useCart();
+
+  useEffect(() => {
+    if (!enabled) return;
+    const hero = pathname === "/" ? document.querySelector<HTMLElement>("[data-hero]") : null;
+    setOverlay(Boolean(hero));
+    // Lenis прокручивает окно штатно, поэтому событие scroll приходит и с ним
+    const update = () => {
+      setScrolled(window.scrollY > COMPACT_AFTER);
+      // Шапка прозрачная, пока под ней видео героя (задание 004), и светлая ниже
+      const header = document.querySelector<HTMLElement>("[data-site-header]");
+      setOverHero(hero ? hero.getBoundingClientRect().bottom > (header?.offsetHeight ?? 0) : false);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [pathname, enabled]);
+
+  return { overlay, overHero, scrolled };
+}
+
+type MenuKey = "catalog" | "cakes";
+
+/** Пункты с мега-меню; остальные пункты — ссылки. */
+const MENU_ITEMS: Record<string, MenuKey> = { "/catalog": "catalog", "/custom-cakes": "cakes" };
+
+/** После какой прокрутки открытое мега-меню закрывается. */
+const CLOSE_AFTER_SCROLL = 80;
+
+const EMPTY_MENU: HeaderMenuData = {
+  categories: [],
+  cakes: null,
+  telegram: null,
+  addressLine: null,
+};
+
+export function Header({
+  phone,
+  menu = EMPTY_MENU,
+  variant: forcedVariant,
+  compact: forcedCompact,
+  isStatic = false,
+}: {
+  /** Телефон из GET /pages/contacts в том виде, как его ввели в админке. */
+  phone: string | null;
+  /** Разделы, меню «Тортов на заказ» и контакты для мега-меню и мобильного меню. */
+  menu?: HeaderMenuData;
+  /** Для витрины компонентов: зафиксировать вариант и не следить за прокруткой. */
+  variant?: HeaderVariant;
+  /** Для витрины: компактная шапка 118px. */
+  compact?: boolean;
+  isStatic?: boolean;
+}) {
   const pathname = usePathname();
+  const { cart } = useCart();
   const count = cart?.total_items ?? 0;
+  const { overlay, overHero, scrolled } = usePageState(pathname, !isStatic);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<MenuKey | null>(null);
+  // До гидрации пункты меню — ссылки: без JS они ведут на разделы
+  const [hydrated, setHydrated] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const buttons = useRef<Partial<Record<MenuKey, HTMLButtonElement | null>>>({});
+  const reduce = useReducedMotion();
 
-  // Шапка получает тень только когда под ней есть контент — на самом верху
-  // страницы линия не нужна и выглядит лишней
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const accentPage = !isStatic && isAccentPath(pathname);
+  const compact = isStatic ? Boolean(forcedCompact) : accentPage || scrolled;
+  const variant: HeaderVariant =
+    forcedVariant ??
+    (openMenu ? "light" : accentPage ? "accent" : overlay && overHero ? "transparent" : "light");
+  const theme = THEMES[variant];
+  const tel = phone ? formatPhone(phone) : null;
 
+  useEffect(() => setHydrated(true), []);
   useEffect(() => {
-    setMenuOpen(false);
+    setMobileOpen(false);
+    setOpenMenu(null);
   }, [pathname]);
 
+  // Закрытие мега-меню: Esc (фокус — на пункт), клик вне шапки, прокрутка > 80px
+  useEffect(() => {
+    if (!openMenu) return;
+    const startY = window.scrollY;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpenMenu(null);
+      buttons.current[openMenu]?.focus();
+    };
+    const onPointer = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setOpenMenu(null);
+    };
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - startY) > CLOSE_AFTER_SCROLL) setOpenMenu(null);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [openMenu]);
+
+  const close = () => setOpenMenu(null);
+
   return (
-    <header
-      className={`sticky top-0 z-30 bg-canvas/85 backdrop-blur-md transition-shadow duration-200 ${
-        scrolled ? "shadow-header" : ""
-      }`}
-    >
-      <div className="container-page flex h-16 items-center justify-between gap-6">
-        <Link href="/" className="flex flex-col leading-none">
-          <span className="font-display text-base tracking-tight">Абрикосова</span>
-          <span className="text-2xs tracking-[0.12em] text-ink-subtle">КОНДИТЕРСКАЯ</span>
-        </Link>
+    <>
+      {/* Место под шапку постоянной высоты: сжатие шапки не сдвигает контент */}
+      {isStatic ? null : (
+        <div
+          aria-hidden="true"
+          className={
+            overlay
+              ? "h-0"
+              : accentPage
+                ? "h-[90px] sm:h-[100px] lg:h-24 xl:h-(--header-h-compact)"
+                : "h-[90px] sm:h-[100px] lg:h-24 xl:h-(--header-h)"
+          }
+        />
+      )}
 
-        <nav className="hidden items-center gap-7 md:flex">
-          {NAV_LINKS.map((link) => {
-            const active = pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`relative py-2 text-sm transition-colors duration-150 ${
-                  active ? "text-ink" : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                {link.label}
-                {active ? (
-                  <span
-                    className="absolute inset-x-0 -bottom-0.5 h-px bg-accent"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </Link>
-            );
-          })}
-        </nav>
+      {/* Затемнение под мега-меню; клик по нему закрывает меню */}
+      <AnimatePresence>
+        {openMenu ? (
+          <motion.div
+            key="menu-dim"
+            aria-hidden="true"
+            className="fixed inset-0 z-30 hidden bg-night/50 lg:block"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={close}
+          />
+        ) : null}
+      </AnimatePresence>
 
-        <div className="flex items-center gap-1">
+      <header
+        ref={headerRef}
+        data-site-header
+        data-variant={variant}
+        data-compact={compact || undefined}
+        className={[
+          isStatic ? "relative" : "fixed inset-x-0 top-0",
+          "z-40 h-[90px] transition-[height,background-color] duration-200 ease-out-soft sm:h-[100px] lg:h-24",
+          compact ? "xl:h-(--header-h-compact)" : "xl:h-(--header-h)",
+          theme.bar,
+        ].join(" ")}
+      >
+        {/* Ниже 1024 (мобильная шапка) белый текст поверх светлых кадров видео
+            не читался — лёгкое затемнение сверху, пока шапка прозрачная. */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-black/35 to-transparent transition-opacity duration-200 lg:hidden ${
+            variant === "transparent" ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        {/* Поля шапки по кадрам главной 834 и 1194 (014): 32 и 40px. Остальные секции
+            главной на этих ширинах пока на общем токене поля — это отдельное задание */}
+        {/* Внутренние страницы с 1280: во всех макетах 09.10 содержимое шапки 118px
+            стоит на 9,5px ниже середины полосы (логотип 48–89, меню 62–75) — 006b */}
+        <div
+          className={`container-page flex h-full items-center sm:max-lg:px-8 lg:max-xl:px-10 ${
+            accentPage ? "xl:pt-[19px]" : ""
+          }`}
+        >
           <Link
-            href="/cart"
-            className="inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm text-ink transition-[background-color,scale] duration-150 hover:bg-surface-sunken active:scale-[0.96]"
-            aria-label={`Корзина, товаров: ${count}`}
+            href="/"
+            className={`shrink-0 transition-colors duration-200 ${theme.logo}`}
+            aria-label="Главная"
           >
-            <CartIcon />
-            <span className="tnum text-xs text-ink-muted">{count}</span>
+            <Logo className="w-[100px] sm:w-[122px] lg:w-[136px] xl:w-[161px]" />
           </Link>
 
-          <button
-            type="button"
-            className="inline-flex size-10 items-center justify-center rounded-md text-ink transition-[background-color,scale] duration-150 hover:bg-surface-sunken active:scale-[0.96] md:hidden"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-            aria-label="Меню"
-            onClick={() => setMenuOpen((open) => !open)}
+          <nav
+            aria-label="Основное меню"
+            className="ml-9 hidden items-center gap-5 lg:flex xl:ml-[90px] xl:gap-10"
           >
-            <MenuIcon open={menuOpen} />
-          </button>
-        </div>
-      </div>
-
-      {/* Выход мягче входа: короткий сдвиг вместо схлопывания высоты */}
-      <div
-        id="mobile-menu"
-        className="overflow-hidden transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.2,0,0,1)] md:hidden"
-        style={{
-          display: "grid",
-          gridTemplateRows: menuOpen ? "1fr" : "0fr",
-          opacity: menuOpen ? 1 : 0,
-        }}
-      >
-        <nav className="container-page min-h-0 pb-4">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="block border-b border-line py-3 text-sm text-ink last:border-b-0"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-export function Footer() {
-  return (
-    <footer className="mt-auto border-t border-line bg-surface">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-12">
-        <div className="md:col-span-4">
-          <p className="font-display text-lg">Абрикосова</p>
-          <p className="mt-2 max-w-xs text-sm text-ink-muted">
-            Торты и десерты ручной работы на заказ.
-          </p>
-        </div>
-
-        <div className="md:col-span-3">
-          <p className="eyebrow mb-3">Контакты</p>
-          <a
-            href="tel:+70000000000"
-            className="tnum block text-sm transition-colors hover:text-accent"
-          >
-            +7 (000) 000-00-00
-          </a>
-          <p className="mt-2 text-sm text-ink-muted">Пн–Пт 9:00–20:00</p>
-          <p className="text-sm text-ink-muted">Сб–Вс 10:00–18:00</p>
-        </div>
-
-        <div className="md:col-span-2">
-          <p className="eyebrow mb-3">Разделы</p>
-          <ul className="space-y-2 text-sm">
-            {NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className="text-ink-muted transition-colors hover:text-ink">
-                  {link.label}
+            {NAV_LINKS.map((link) => {
+              const key = MENU_ITEMS[link.href];
+              // Страница товара — внутри «Каталога» (макет товара 09.10, 006b)
+              const current = pathname.startsWith(link.href)
+                ? "page"
+                : link.href === "/catalog" && pathname.startsWith("/product/")
+                  ? "true"
+                  : undefined;
+              const itemClass = `inline-flex items-center text-[15px] whitespace-nowrap transition-colors duration-200 xl:text-nav ${theme.nav}`;
+              if (key && hydrated) {
+                const open = openMenu === key;
+                // Панель — в DOM сразу за своей кнопкой: Tab с открытого пункта идёт
+                // по ссылкам меню, а не на соседний пункт (disclosure navigation).
+                // Обёртка статичная, панель позиционируется от шапки
+                return (
+                  <div key={link.href} className="contents">
+                    <button
+                      ref={(element) => {
+                        buttons.current[key] = element;
+                      }}
+                      type="button"
+                      aria-expanded={open}
+                      aria-controls={`mega-${key}`}
+                      aria-current={current}
+                      onClick={() => setOpenMenu(open ? null : key)}
+                      className={`${itemClass} ${open ? "underline underline-offset-[5px]" : ""}`}
+                    >
+                      {typograf(link.label)}
+                      <Chevron open={open} className="ml-2 xl:mr-1.5 xl:ml-[9px]" />
+                    </button>
+                    {/* Выезжает вниз из-под шапки: обёртка обрезает её по нижнему краю шапки */}
+                    <div className="absolute inset-x-0 top-full overflow-hidden">
+                      <AnimatePresence initial={false}>
+                        {open ? (
+                          <motion.div
+                            key={key}
+                            id={`mega-${key}`}
+                            className="border-t border-line bg-canvas"
+                            initial={reduce ? { opacity: 0 } : { y: "-100%" }}
+                            animate={reduce ? { opacity: 1 } : { y: 0 }}
+                            exit={reduce ? { opacity: 0 } : { y: "-100%" }}
+                            transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
+                          >
+                            {key === "catalog" ? (
+                              <CatalogPanel categories={menu.categories} onNavigate={close} />
+                            ) : (
+                              <CakesPanel cakes={menu.cakes} onNavigate={close} />
+                            )}
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <Link key={link.href} href={link.href} aria-current={current} className={itemClass}>
+                  {typograf(link.label)}
+                  {key ? <Chevron className="ml-2 xl:mr-1.5 xl:ml-[9px]" /> : null}
                 </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+              );
+            })}
+          </nav>
 
-        <div className="md:col-span-3">
-          <p className="eyebrow mb-3">Документы</p>
-          <ul className="space-y-2 text-sm">
-            <li>
-              <Link href="/privacy" className="text-ink-muted transition-colors hover:text-ink">
-                Политика конфиденциальности
-              </Link>
-            </li>
-            <li>
-              <Link href="/terms" className="text-ink-muted transition-colors hover:text-ink">
-                Пользовательское соглашение
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
+          <div className="ml-auto flex items-center">
+            <Link
+              href="/cart"
+              className={`inline-flex items-center text-base whitespace-nowrap transition-colors duration-200 ${theme.secondary}`}
+            >
+              {/* Настоящий пробел, а не только отступ: скринридер читает «Корзина 0»,
+                  и доступное имя совпадает с видимым текстом. На телефоне — сумка */}
+              <BagIcon className="mr-2 sm:hidden" />
+              <span className="max-sm:sr-only">Корзина </span>
+              <span className="tnum ml-1 text-sm sm:ml-2">{count}</span>
+              <span className="sr-only">{typograf(" — товаров в корзине")}</span>
+            </Link>
 
-      <div className="border-t border-line">
-        <div className="container-page flex flex-wrap justify-between gap-3 py-5 text-xs text-ink-subtle">
-          <p>© {new Date().getFullYear()} Кондитерская Елены Абрикосовой</p>
-          <p>Информация на сайте не является публичной офертой</p>
+            {tel ? (
+              <a
+                href={tel.href}
+                className={`ml-[35px] hidden text-lg whitespace-nowrap transition-colors duration-200 min-[1400px]:inline ${theme.secondary}`}
+              >
+                {tel.display}
+              </a>
+            ) : null}
+
+            <Link
+              href="/custom-cakes?request=1"
+              className={`ml-8 hidden h-12 w-[156px] items-center justify-center border text-sm font-light uppercase xl:ml-[34px] transition-colors duration-200 lg:inline-flex xl:h-13 xl:w-[201px] xl:text-[1.03125rem] ${theme.button}`}
+            >
+              Заказать торт
+            </Link>
+
+            <button
+              type="button"
+              className={`-mr-2 ml-4 inline-flex size-10 items-center justify-center sm:ml-6 lg:hidden ${theme.secondary}`}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
+              aria-label="Открыть меню"
+              onClick={() => setMobileOpen(true)}
+            >
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+                <path d="M0 1h16M0 6h16M0 11h16" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
-    </footer>
+      </header>
+
+      <MobileMenu
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        tel={tel}
+        count={count}
+        menu={menu}
+      />
+    </>
   );
 }

@@ -1,78 +1,216 @@
-import { EmptyState, LinkButton, Picture } from "@/components/ui";
-import { apiGet, type GalleryItem, type Page } from "@/lib/api";
+/**
+ * «Работы» по макету new/design/pages/works.png (009).
+ *
+ * Сервер рисует всё по параметрам адреса: фильтр `?occasion=` и «Показать ещё»
+ * `?page=N` (страницы 1…N сразу, как каталог 005b). С JS «Показать ещё» — та же
+ * ссылка без прокрутки наверх; без JS фильтр и догрузка работают обычными ссылками.
+ *
+ * Фильтр — «таблетки» поводов с числом работ (`GET /gallery/occasions`), пустые
+ * скрыты. «Юбилей и корпоратив» — одно значение `anniversary_corporate`, бэкенд
+ * разворачивает его в два повода. Тексты (справа от заголовка и плашка внизу) —
+ * страница контента `gallery` («Страницы сайта» → «Работы»).
+ */
 
-export const metadata = { title: "Примеры работ" };
+import Link from "next/link";
+import type { Metadata } from "next";
+import { CtaBanner } from "@/components/cta-banner";
+import { Reveal, RevealGroup, RevealText } from "@/components/motion";
+import { Breadcrumbs, EmptyState, LinkButton } from "@/components/ui";
+import { WorkCard } from "@/components/work-card";
+import {
+  apiGet,
+  type GalleryFacet,
+  type GalleryItem,
+  type GalleryOccasion,
+  type GalleryPageContent,
+  type Page,
+} from "@/lib/api";
+import { typograf } from "@/lib/format";
+import { pageMetadata } from "@/lib/seo";
+
 export const revalidate = 300;
 
-/**
- * Раскладка плиток бенто.
- *
- * Паттерн повторяется каждые 6 работ, поэтому сетка остаётся ритмичной при
- * любом количестве фотографий — в отличие от случайных размеров, где ряды
- * то и дело рвутся пустотами.
- */
-const TILE_SPANS = [
-  "col-span-2 row-span-2 md:col-span-2 md:row-span-2",
-  "col-span-2 row-span-1 md:col-span-2 md:row-span-1",
-  "col-span-1 row-span-1 md:col-span-1 md:row-span-1",
-  "col-span-1 row-span-1 md:col-span-1 md:row-span-1",
-  "col-span-2 row-span-1 md:col-span-1 md:row-span-2",
-  "col-span-2 row-span-2 md:col-span-3 md:row-span-2",
+/** Работ на странице «Показать ещё». */
+const PAGE_SIZE = 12;
+/** Предел API (`page_size ≤ 60`): дальше пяти страниц адрес с ?page не растёт */
+const MAX_PAGES = 5;
+
+const OCCASIONS: readonly GalleryOccasion[] = [
+  "wedding",
+  "birthday",
+  "kids",
+  "anniversary_corporate",
 ];
 
-export default async function GalleryPage() {
-  const gallery = await apiGet<Page<GalleryItem>>("/gallery?page_size=24").catch(() => null);
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function readQuery(params: Record<string, string | string[] | undefined>) {
+  const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  const occasion = OCCASIONS.find((o) => o === one(params.occasion)) ?? null;
+  const page = Math.min(Math.max(Number.parseInt(one(params.page) ?? "1", 10) || 1, 1), MAX_PAGES);
+  return { occasion, page };
+}
+
+function href(occasion: GalleryOccasion | null, page = 1): string {
+  const query = new URLSearchParams();
+  if (occasion) query.set("occasion", occasion);
+  if (page > 1) query.set("page", String(page));
+  const search = query.toString();
+  return search ? `/gallery?${search}` : "/gallery";
+}
+
+async function safeGet<T>(path: string, fallback: T): Promise<T> {
+  try {
+    return await apiGet<T>(path);
+  } catch {
+    return fallback;
+  }
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const { occasion, page } = readQuery(await searchParams);
+  // Фильтр и «Показать ещё» — та же страница: noindex, follow и canonical на /gallery
+  return pageMetadata({
+    title: "Работы",
+    description:
+      "Торты, которые Елена делала на свадьбы, дни рождения и юбилеи: ярусы, вес и число гостей под каждым фото.",
+    path: "/gallery",
+    noindex: Boolean(occasion) || page > 1,
+    canonical: true,
+  });
+}
+
+export default async function GalleryPage({ searchParams }: { searchParams: SearchParams }) {
+  const { occasion, page } = readQuery(await searchParams);
+  const empty: Page<GalleryItem> = { items: [], total: 0, page: 1, page_size: 0 };
+  const query = new URLSearchParams({ page_size: String(PAGE_SIZE * page) });
+  if (occasion) query.set("occasion", occasion);
+  const [works, facets, content] = await Promise.all([
+    safeGet<Page<GalleryItem>>(`/gallery?${query}`, empty),
+    safeGet<GalleryFacet[]>("/gallery/occasions", []),
+    safeGet<GalleryPageContent | null>("/pages/gallery", null),
+  ]);
+  const pills = facets.filter((facet) => facet.count > 0);
+  const hasMore = works.items.length < works.total && page < MAX_PAGES;
+  const intro = content?.content.intro;
+  const cta = content?.content.cta;
 
   return (
-    <div className="container-page py-10 md:py-16">
-      <p className="eyebrow mb-6">Портфолио</p>
-      <h1 className="max-w-[14ch] text-4xl">Примеры работ</h1>
-      <p className="mt-6 max-w-xl text-lg text-ink-muted">
-        Готовые заказы за последнее время. Любую из этих работ можно повторить или взять за основу.
-      </p>
+    <div className="container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[128px]">
+      <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: "Работы" }]} />
 
-      <div className="mt-12 md:mt-16">
-        {!gallery || gallery.items.length === 0 ? (
-          <EmptyState
-            title="Скоро здесь появятся наши работы"
-            description="Пока портфолио наполняется — загляните в каталог готовых позиций."
-            action={<LinkButton href="/catalog">В каталог</LinkButton>}
-          />
-        ) : (
-          <div className="bento">
-            {gallery.items.map((item, index) => (
-              <figure
-                key={item.id}
-                className={`bento-tile group ${TILE_SPANS[index % TILE_SPANS.length]}`}
-              >
-                <Picture
-                  storageKey={item.image_key}
-                  alt={item.caption}
-                  ratio="1/1"
-                  sizes="(min-width: 768px) 33vw, 50vw"
-                  className="absolute inset-0 h-full"
-                />
-                {/* Подпись поверх фото: не отнимает высоту у плитки и не рвёт сетку */}
-                <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-4 pb-3 pt-10 text-xs text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  {item.caption}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        )}
+      <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start xl:mt-[25px]">
+        <RevealText as="h1" className="font-display text-section leading-[1.1] text-ink">
+          Работы
+        </RevealText>
+        {intro ? (
+          <Reveal
+            as="p"
+            className="max-w-[600px] text-[17px] leading-7 font-light text-ink-muted md:-mt-[5px]"
+          >
+            {intro}
+          </Reveal>
+        ) : null}
       </div>
 
-      <section className="section">
-        <div className="rounded-2xl bg-surface px-6 py-16 text-center shadow-raised md:px-16 md:py-20">
-          <h2 className="mx-auto max-w-[16ch] text-3xl">Хотите такой же торт?</h2>
-          <p className="mx-auto mt-5 max-w-md text-base text-ink-muted">
-            Расскажите про повод и дату — предложим вариант с оформлением и сориентируем по цене.
-          </p>
-          <div className="mt-9 flex justify-center">
-            <LinkButton href="/custom-cakes">Обсудить свой торт</LinkButton>
+      {pills.length > 0 ? (
+        <nav
+          aria-label="Поводы"
+          className="scrollbar-none mt-6 overflow-x-auto max-lg:[mask-image:linear-gradient(to_right,#000_calc(100%-32px),transparent)] xl:mt-[26px]"
+        >
+          <ul className="flex w-max gap-2">
+            {[{ value: null, label: "Все" }, ...pills].map((pill) => {
+              const selected = pill.value === occasion;
+              return (
+                <li key={pill.value ?? "all"}>
+                  <Link
+                    href={href(pill.value)}
+                    aria-current={selected ? "page" : undefined}
+                    scroll={false}
+                    className={`flex h-[38px] items-center rounded-[2px] border px-[15px] text-sm whitespace-nowrap transition-colors duration-150 ${
+                      selected
+                        ? "border-accent bg-accent text-canvas"
+                        : "border-line text-ink hover:border-accent hover:text-accent"
+                    }`}
+                  >
+                    {typograf(pill.label)}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      ) : null}
+
+      <div className="mt-10 xl:mt-[41px]">
+        {/* Заголовок списка для скринридеров: после H1 карточки (H3) шли бы без H2 */}
+        <h2 className="sr-only">Примеры работ</h2>
+        {works.items.length === 0 ? (
+          <EmptyState
+            title="Скоро здесь появятся работы"
+            description="Пока раздел наполняется — загляните в каталог или закажите торт под свой повод."
+            action={<LinkButton href="/custom-cakes">Заказать торт</LinkButton>}
+          />
+        ) : (
+          <RevealGroup
+            as="ul"
+            className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:gap-y-[55px]"
+          >
+            {works.items.map((work, index) => (
+              <li key={work.id}>
+                <WorkCard
+                  title={work.caption}
+                  image={work.image_key}
+                  secondImage={work.detail_image_key}
+                  occasion={work.occasion}
+                  madeIn={work.made_in}
+                  tiers={work.tiers}
+                  weightGrams={work.weight_grams}
+                  guests={work.guests}
+                  orderHref={`/custom-cakes?like=${work.id}`}
+                  sizes="(min-width: 1024px) 456px, (min-width: 640px) 47vw, 92vw"
+                  placeholderLabel={work.caption}
+                  touchLink
+                  priority={index < 3}
+                />
+              </li>
+            ))}
+          </RevealGroup>
+        )}
+
+        {hasMore ? (
+          <div className="mt-14 flex justify-center xl:mt-[55px]">
+            <LinkButton
+              href={href(occasion, page + 1)}
+              variant="outline"
+              size="md"
+              scroll={false}
+              className="w-[194px]"
+            >
+              Показать ещё
+            </LinkButton>
           </div>
-        </div>
-      </section>
+        ) : null}
+      </div>
+
+      {cta ? (
+        <section aria-labelledby="works-cta-title" className="mt-20 xl:mt-[128px]">
+          <CtaBanner
+            id="works-cta-title"
+            title={cta.title}
+            text={cta.text}
+            href="/custom-cakes"
+            label="Заказать свой дизайн"
+            buttonClassName="w-[260px] max-md:w-full"
+            buttonVariant="outline-line-on-accent"
+            buttonSize="md-tight-regular"
+          />
+        </section>
+      ) : null}
     </div>
   );
 }

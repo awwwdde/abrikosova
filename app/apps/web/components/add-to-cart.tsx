@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { Button } from "@/components/ui";
+import { typograf } from "@/lib/format";
 
-export function AddToCart({ productId, disabled }: { productId: number; disabled?: boolean }) {
+export function AddToCart({ variantId, disabled }: { variantId: number; disabled?: boolean }) {
   const { addItem } = useCart();
   const [state, setState] = useState<"idle" | "loading" | "added">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +14,7 @@ export function AddToCart({ productId, disabled }: { productId: number; disabled
   if (disabled) {
     return (
       <p className="rounded-md bg-surface-sunken px-4 py-3 text-sm text-ink-muted">
-        Сейчас недоступно — уточните наличие по телефону.
+        {typograf("Сейчас недоступно — уточните наличие по телефону.")}
       </p>
     );
   }
@@ -22,7 +23,7 @@ export function AddToCart({ productId, disabled }: { productId: number; disabled
     setState("loading");
     setError(null);
     try {
-      await addItem(productId);
+      await addItem(variantId);
       setState("added");
     } catch {
       setState("idle");
@@ -34,7 +35,7 @@ export function AddToCart({ productId, disabled }: { productId: number; disabled
     <div>
       {state === "added" ? (
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm text-ink-muted">Добавлено в корзину</span>
+          <span className="text-sm text-ink-muted">{typograf("Добавлено в корзину")}</span>
           <Link
             href="/cart"
             className="inline-flex min-h-10 items-center rounded-md bg-accent px-5 text-sm font-medium text-white shadow-raised transition-[background-color,scale] duration-150 hover:bg-accent-hover active:scale-[0.96]"
@@ -48,13 +49,13 @@ export function AddToCart({ productId, disabled }: { productId: number; disabled
           disabled={state === "loading"}
           className="w-full sm:w-auto sm:px-8"
         >
-          {state === "loading" ? "Добавляем…" : "В корзину"}
+          {typograf(state === "loading" ? "Добавляем…" : "В корзину")}
         </Button>
       )}
 
       {error ? (
         <p role="alert" className="mt-2 text-xs text-danger">
-          {error}
+          {typograf(error)}
         </p>
       ) : null}
     </div>

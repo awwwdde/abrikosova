@@ -7,6 +7,8 @@ SECRET_KEY и рабочие креды прокси лежали в репоз�
 
 import logging
 from functools import lru_cache
+from ipaddress import ip_network
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import ValidationInfo, field_validator, model_validator
@@ -28,6 +30,18 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://abrikosova:abrikosova@localhost:5432/abrikosova"
     redis_url: str = "redis://localhost:6379/0"
+    # Только адреса прокси, которые дописывают реальный peer справа в XFF.
+    # Uvicorn запускается с --no-proxy-headers: peer проверяем сами.
+    trusted_proxy_networks: list[str] = []
+
+    @field_validator("trusted_proxy_networks")
+    @classmethod
+    def validate_proxy_networks(cls, values: list[str]) -> list[str]:
+        for value in values:
+            network = ip_network(value, strict=False)
+            if network.prefixlen == 0:
+                raise ValueError("Нельзя доверять всем адресам как прокси")
+        return values
 
     # CORS: закрытый список адресов фронтенда. Wildcard недопустим — запросы к API
     # ходят с credentials (cookie корзины и refresh-токен).
@@ -50,11 +64,21 @@ class Settings(BaseSettings):
     cart_cookie_name: str = "cart_id"
     refresh_cookie_name: str = "refresh_token"
     cart_ttl_days: int = 30
+    # Refresh-cookie админки — Strict, в отличие от корзины: переход в админку
+    # по внешней ссылке с готовой сессией не нужен, а Strict отрезает любые
+    # межсайтовые запросы с этой cookie (задание 011a)
+    refresh_cookie_samesite: str = "strict"
+
+    # --- Сессии админки (задание 011a) ---
+    admin_session_idle_days: int = 7
+    admin_session_absolute_days: int = 30
 
     # --- Учётная запись owner для первого входа ---
     # Пароль живёт только в окружении и меняется из админки после первого входа.
     admin_seed_email: str | None = None
     admin_seed_password: str | None = None
+    # Имя сид-владельца в админке: «Добрый день, Елена» (011c)
+    admin_seed_name: str = "Елена Абрикосова"
 
     # --- Уведомления ---
     smtp_host: str | None = None
@@ -63,6 +87,9 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_from: str | None = None
     notify_email_to: str | None = None
+    # Адрес сайта для писем покупателю (007a): логотип по абсолютному URL и ссылка
+    # на страницу «Заказ принят»
+    site_url: str = "http://localhost:3000"
 
     # --- Планировщик: ночной бэкап и очистка ПДн ---
     # Выключается в тестах и там, где несколько экземпляров приложения
@@ -90,7 +117,11 @@ class Settings(BaseSettings):
     web_revalidate_url: str | None = None
     revalidate_secret: str | None = None
 
-    # --- Объектное хранилище (S3-совместимое) ---
+    # Постоянный диск приложения; целиком наружу не монтируется.
+    media_root: str = "/var/lib/abrikosova/media"
+    media_storage: Literal["database", "filesystem"] = "database"
+
+    # Только для разового переноса прежних файлов; приложение S3 не использует.
     s3_endpoint_url: str | None = None
     s3_bucket: str = "abrikosova"
     s3_access_key: str | None = None

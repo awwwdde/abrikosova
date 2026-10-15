@@ -1,34 +1,56 @@
-export const metadata = { title: "Пользовательское соглашение" };
+/**
+ * Пользовательское соглашение (010b, раскладка — components/legal-page.tsx).
+ *
+ * ЧЕРНОВИК СТРУКТУРЫ: финальный текст предоставляет заказчик. Видимая плашка
+ * об этом убрана со страницы — заметка для нас, а не для посетителя.
+ */
 
-export default function TermsPage() {
+import { LegalPage, loadLegal } from "@/components/legal-page";
+import { pageMetadata } from "@/lib/seo";
+
+export const revalidate = 300;
+
+export const metadata = pageMetadata({
+  title: "Пользовательское соглашение",
+  description:
+    "Условия заказа, оплаты, доставки и возврата на сайте кондитерской Елены Абрикосовой.",
+  path: "/terms",
+});
+
+export default async function TermsPage() {
+  const { legal } = await loadLegal();
   return (
-    <article className="container-page max-w-2xl py-10 text-sm leading-relaxed md:py-14">
-      <h1 className="mb-8 text-3xl">Пользовательское соглашение</h1>
-
-      <p className="rounded-md bg-surface-sunken px-4 py-3 text-xs text-ink-muted">
-        Черновик структуры. Финальный текст предоставляет заказчик.
-      </p>
-
-      <h2 className="mt-8 mb-2 text-base">1. Предмет соглашения</h2>
-      <p className="mt-2 text-ink-muted">
-        Условия использования сайта и порядок оформления заказов.
-      </p>
-
-      <h2 className="mt-8 mb-2 text-base">2. Порядок использования сайта</h2>
-      <p className="mt-2 text-ink-muted">
-        Сайт предназначен для ознакомления с ассортиментом и оформления заказов без регистрации.
-      </p>
-
-      <h2 className="mt-8 mb-2 text-base">3. Заказы и оплата</h2>
-      <p className="mt-2 text-ink-muted">
-        Оплата на сайте не принимается — расчёт при получении или по договорённости. Информация на
-        сайте не является публичной офертой.
-      </p>
-
-      <h2 className="mt-8 mb-2 text-base">4. Ограничение ответственности</h2>
-      <p className="mt-2 text-ink-muted">
-        Пределы ответственности сторон определяются законодательством РФ.
-      </p>
-    </article>
+    <LegalPage
+      title="Пользовательское соглашение"
+      revisedAt={legal?.content.terms_revised_at}
+      sections={[
+        {
+          title: "Предмет соглашения",
+          body: <p>Условия использования сайта и порядок оформления заказов.</p>,
+        },
+        {
+          title: "Порядок использования сайта",
+          body: (
+            <p>
+              Сайт предназначен для ознакомления с ассортиментом и оформления заказов без
+              регистрации.
+            </p>
+          ),
+        },
+        {
+          title: "Заказы и оплата",
+          body: (
+            <p>
+              Оплата на сайте не принимается — расчёт при получении или по договорённости.
+              Информация на сайте не является публичной офертой.
+            </p>
+          ),
+        },
+        {
+          title: "Ограничение ответственности",
+          body: <p>Пределы ответственности сторон определяются законодательством РФ.</p>,
+        },
+      ]}
+    />
   );
 }

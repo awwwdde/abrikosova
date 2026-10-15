@@ -1,0 +1,15 @@
+{
+  "name": "admin-qa",
+  "private": true,
+  "description": "Визуальный QA админки (011g): сдвиги, выравнивание, переносы — в Chromium и Firefox",
+  "type": "module",
+  "scripts": {
+    "setup": "playwright install chromium firefox",
+    "qa": "node qa.mjs",
+    "qa:quick": "node qa.mjs --quick"
+  },
+  "devDependencies": {
+    "axe-core": "^4.13.0",
+    "playwright": "1.56.1"
+  }
+}

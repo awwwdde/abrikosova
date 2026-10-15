@@ -1,146 +1,356 @@
-import { RequestForm } from "@/components/request-form";
-import { Card, ImagePlaceholder, Picture, Price, SectionHeader } from "@/components/ui";
-import { apiGet, type Filling, type PageContent } from "@/lib/api";
+/**
+ * «Торты на заказ» по кадру списка new/design/pages/custom-cakes.png (008b).
+ *
+ * Данные — только из API: сетка `GET /custom-cakes?occasion=`, остальное —
+ * `/custom-cakes/info` (факты, цены, этапы, вопросы: тексты из «Страниц сайта»,
+ * числа из «Настроек → Торты на заказ»), все начинки — `/custom-cakes/fillings`,
+ * первое значение калькулятора — `/custom-cakes/estimate`. Кэш помечен тегом
+ * `custom_cakes` (lib/api.ts): правка в админке сбрасывает его сразу.
+ *
+ * Фильтр поводов — как в «Работах» (009): `?occasion=` в адресе, обычные ссылки
+ * (без JS тоже), «Все» сбрасывает. Окно заявки и страница дизайна — 008c: кнопки
+ * заявки пока ведут на `?request=1`, карточки — на `/custom-cakes/<slug>`.
+ */
 
-export const metadata = { title: "Торты на заказ" };
+import Link from "next/link";
+import type { Metadata } from "next";
+import { Calculator } from "@/components/custom-cakes/calculator";
+import { DesignCard, IdeaCard } from "@/components/custom-cakes/design-card";
+import { FillingsSection } from "@/components/custom-cakes/fillings-section";
+import { FaqColumns } from "@/components/home/faq";
+import { JsonLd } from "@/components/json-ld";
+import { Reveal, RevealGroup, RevealText } from "@/components/motion";
+import { Breadcrumbs, EmptyState, LinkButton } from "@/components/ui";
+import {
+  apiGet,
+  formatPrice,
+  type CakeEstimate,
+  type CakeFilling,
+  type ContactsPage,
+  type CustomCakeList,
+  type CustomCakesInfo,
+  type GalleryOccasion,
+} from "@/lib/api";
+import { typograf } from "@/lib/format";
+import { designsJsonLd, faqJsonLd } from "@/lib/json-ld";
+import { pageMetadata } from "@/lib/seo";
+
 export const revalidate = 300;
 
-type CustomCakesData = {
-  cakes: {
-    id: number;
-    title: string;
-    description: string;
-    price_from: string;
-    image_key: string;
-  }[];
-  fillings: Filling[];
-  page: PageContent | null;
-};
-
-const STEPS = [
-  { title: "Консультация", text: "Обсуждаем повод, вкус, размер и бюджет." },
-  { title: "Согласование", text: "Утверждаем дизайн и начинку, фиксируем дату." },
-  { title: "Изготовление", text: "Собираем торт под дату получения." },
-  { title: "Получение", text: "Доставка или самовывоз в согласованное время." },
+const OCCASIONS: readonly GalleryOccasion[] = [
+  "wedding",
+  "birthday",
+  "kids",
+  "anniversary_corporate",
 ];
+/** Гостей в калькуляторе при открытии страницы (кадр списка) */
+const CALCULATOR_GUESTS = 20;
+/** Заголовки секций по кадру: Forum 48 */
+const SECTION_TITLE = "font-display text-section leading-[1.1] text-ink";
+/** Колонки фактов шапки (и ячеек калькулятора): 175 / 200 / 200 на 576 по кадру */
+const FACT_COLUMNS = "grid-cols-[175fr_200fr_200fr]";
 
-export default async function CustomCakesPage() {
-  const data = await apiGet<CustomCakesData>("/custom-cakes").catch(
-    () => ({ cakes: [], fillings: [], page: null }) as CustomCakesData,
-  );
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function readOccasion(params: Record<string, string | string[] | undefined>) {
+  const value = Array.isArray(params.occasion) ? params.occasion[0] : params.occasion;
+  return OCCASIONS.find((occasion) => occasion === value) ?? null;
+}
+
+function href(occasion: GalleryOccasion | null): string {
+  return occasion ? `/custom-cakes?occasion=${occasion}` : "/custom-cakes";
+}
+
+async function safeGet<T>(path: string, fallback: T): Promise<T> {
+  try {
+    return await apiGet<T>(path);
+  } catch {
+    return fallback;
+  }
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const occasion = readOccasion(await searchParams);
+  const info = await safeGet<CustomCakesInfo | null>("/custom-cakes/info", null);
+  // Фильтр — та же страница: noindex, follow и canonical на /custom-cakes
+  return pageMetadata({
+    title: info?.title ?? "Торты на заказ",
+    description:
+      info?.subtitle ??
+      "Торт под вашу дату, повод и число гостей: дизайны, цены за килограмм и начинки.",
+    path: "/custom-cakes",
+    noindex: Boolean(occasion),
+    canonical: true,
+  });
+}
+
+export default async function CustomCakesPage({ searchParams }: { searchParams: SearchParams }) {
+  const occasion = readOccasion(await searchParams);
+  const emptyList: CustomCakeList = { items: [], total: 0, facets: [] };
+  const [list, info, fillings, estimate, contacts] = await Promise.all([
+    safeGet<CustomCakeList>(href(occasion), emptyList),
+    safeGet<CustomCakesInfo | null>("/custom-cakes/info", null),
+    safeGet<CakeFilling[]>("/custom-cakes/fillings", []),
+    safeGet<CakeEstimate | null>(`/custom-cakes/estimate?guests=${CALCULATOR_GUESTS}`, null),
+    safeGet<ContactsPage | null>("/pages/contacts", null),
+  ]);
+  const pills = list.facets.filter((facet) => facet.count > 0);
+  const allCount = list.facets.reduce((sum, facet) => sum + facet.count, 0);
+  const telegram = contacts?.telegram_url;
+  const title = info?.title ?? "Торты на заказ";
 
   return (
-    <>
-      <section className="container-page pt-10 md:pt-16">
-        <p className="eyebrow mb-6">Индивидуальный заказ</p>
-        <h1 className="max-w-[13ch] text-5xl">Торт под ваш повод</h1>
-        <p className="mt-8 max-w-xl text-lg text-ink-muted">
-          Вкус, размер и оформление обсуждаем лично. Начинаем с короткого разговора — расскажите,
-          что нужно, и мы предложим варианты.
-        </p>
+    <div className="container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[128px]">
+      <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: title }]} />
 
-        <div className="bento mt-10 md:mt-14">
-          <div className="bento-tile col-span-2 row-span-2 md:col-span-3 md:row-span-2">
-            <ImagePlaceholder fill label="авторская работа" />
-          </div>
-          <div className="bento-tile col-span-1 row-span-1 md:col-span-1 md:row-span-1">
-            <ImagePlaceholder fill label="фото" />
-          </div>
-          <div className="bento-tile col-span-1 row-span-1 flex flex-col justify-between p-5 md:col-span-1 md:row-span-1 md:p-6">
-            <p className="eyebrow">Срок</p>
-            <p className="font-display text-2xl leading-none">от 3 дней</p>
-          </div>
+      <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_576px] lg:items-end xl:mt-[21px]">
+        <div>
+          <RevealText as="h1" className="font-display text-section leading-[1.1] text-ink">
+            {title}
+          </RevealText>
+          {info?.subtitle ? (
+            <Reveal
+              as="p"
+              className="mt-0 max-w-[740px] text-[17px] leading-[30px] whitespace-pre-line text-ink-muted"
+            >
+              {typograf(info.subtitle)}
+            </Reveal>
+          ) : null}
+          <Reveal className="mt-[32px] flex flex-wrap gap-3">
+            <LinkButton
+              href="/custom-cakes?request=1"
+              scroll={false}
+              size="md-tight"
+              className="w-[209px]"
+            >
+              Заказать свой дизайн
+            </LinkButton>
+            {telegram ? (
+              <LinkButton href={telegram} variant="outline" size="md-tight" className="w-[201px]">
+                Написать в Telegram
+              </LinkButton>
+            ) : null}
+          </Reveal>
         </div>
-      </section>
-
-      {data.fillings.length > 0 ? (
-        <section className="container-page section">
-          <SectionHeader eyebrow="Основа вкуса" title="Начинки" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-            {data.fillings.map((filling) => (
-              <Card key={filling.id} interactive className="overflow-hidden">
-                <Picture storageKey={filling.image_key} alt={filling.name} ratio="16/9" />
-                <div className="p-5 md:p-6">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-base font-medium">{filling.name}</p>
-                    <Price value={filling.price_per_kg} className="text-xs text-ink-subtle" />
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                    {filling.description}
-                  </p>
-                </div>
-              </Card>
+        {info ? (
+          <Reveal as="dl" className={`grid border-y border-line ${FACT_COLUMNS}`}>
+            {info.facts.map((fact, index) => (
+              <div
+                key={fact.label}
+                className={`flex flex-col-reverse py-[22px] ${index > 0 ? "border-l border-line pl-6" : ""}`}
+              >
+                <dt className="mt-[10px] text-[13px] leading-5 text-ink-subtle">{fact.label}</dt>
+                <dd className="font-display text-[26px] leading-8 text-ink max-sm:text-[22px]">
+                  {fact.value}
+                </dd>
+              </div>
             ))}
-          </div>
-        </section>
+          </Reveal>
+        ) : null}
+      </div>
+
+      {pills.length > 0 ? (
+        <nav
+          aria-label="Поводы"
+          className="scrollbar-none mt-10 overflow-x-auto max-lg:[mask-image:linear-gradient(to_right,#000_calc(100%-32px),transparent)] xl:mt-[56px]"
+        >
+          <ul className="flex w-max gap-2">
+            {[{ value: null, label: "Все", count: allCount }, ...pills].map((pill) => {
+              const selected = pill.value === occasion;
+              return (
+                <li key={pill.value ?? "all"}>
+                  <Link
+                    href={href(pill.value)}
+                    aria-current={selected ? "page" : undefined}
+                    scroll={false}
+                    className={`relative flex h-[38px] items-center rounded-[2px] border px-[15px] text-sm whitespace-nowrap transition-colors duration-150 ${
+                      selected
+                        ? "border-accent bg-accent text-canvas"
+                        : "border-line text-ink hover:border-accent hover:text-accent"
+                    }`}
+                  >
+                    {typograf(pill.label)}
+                    <span className="sr-only">: {pill.count}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       ) : null}
 
-      <section className="border-y border-line bg-surface">
-        <div className="container-page section">
-          <SectionHeader eyebrow="Как это работает" title="Четыре шага до готового торта" />
-          <ol className="bento">
-            {STEPS.map((step, index) => (
-              <li
-                key={step.title}
-                className="bento-tile col-span-2 row-span-1 flex flex-col justify-between p-6 md:col-span-1 md:row-span-1 md:p-7"
-              >
-                <p className="tnum text-2xs text-ink-subtle">
-                  {String(index + 1).padStart(2, "0")}
-                </p>
-                <div>
-                  <h3 className="text-xl">{step.title}</h3>
-                  <p className="mt-2 text-sm text-ink-muted">{step.text}</p>
-                </div>
+      <section aria-labelledby="designs-title" className="mt-10 xl:mt-[40px]">
+        {/* Заголовок списка для скринридеров: после H1 карточки (H3) шли бы без H2 */}
+        <h2 id="designs-title" className="sr-only">
+          Дизайны
+        </h2>
+        {list.items.length === 0 ? (
+          <EmptyState
+            title="Дизайнов с этим поводом пока нет"
+            description="Посмотрите все дизайны или пришлите свой образец — Елена соберёт эскиз под ваш праздник."
+            action={<LinkButton href="/custom-cakes">Все дизайны</LinkButton>}
+          />
+        ) : (
+          <RevealGroup
+            as="ul"
+            className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-y-[55px]"
+          >
+            <li>
+              <IdeaCard text={info?.idea_text ?? null} />
+            </li>
+            {list.items.map((card, index) => (
+              <li key={card.id}>
+                <DesignCard card={card} priority={index < 3} />
               </li>
             ))}
-          </ol>
-        </div>
+          </RevealGroup>
+        )}
       </section>
 
-      {data.cakes.length > 0 ? (
-        <section className="container-page section">
-          <SectionHeader eyebrow="Портфолио" title="Примеры авторских тортов" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-            {data.cakes.map((cake) => (
-              <Card key={cake.id} interactive className="overflow-hidden">
-                <Picture storageKey={cake.image_key} alt={cake.title} ratio="4/5" />
-                <div className="p-5 md:p-6">
-                  <p className="text-base font-medium">{cake.title}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">{cake.description}</p>
-                  <p className="mt-4 text-sm">
-                    от <Price value={cake.price_from} className="font-medium" />
-                  </p>
-                </div>
-              </Card>
-            ))}
-          </div>
+      {estimate && info ? (
+        <section aria-labelledby="calculator-title" className="mt-20 xl:mt-[127px]">
+          <Calculator
+            initial={estimate}
+            intro={[`Считаем около ${info.grams_per_guest} г на гостя.`, info.calculator_text]
+              .filter(Boolean)
+              .join(" ")}
+            note={info.calculator_note ?? null}
+          />
         </section>
       ) : null}
 
-      <section className="border-t border-line bg-surface">
-        <div className="container-page section">
-          <div className="grid gap-12 md:grid-cols-12 md:gap-16">
-            <div className="md:col-span-5">
-              <p className="eyebrow mb-5">Первый шаг</p>
-              <h2 className="text-3xl">Оставьте заявку</h2>
-              <p className="mt-6 text-base leading-relaxed text-ink-muted">
-                Достаточно имени и телефона. Опишите идею в свободной форме — или просто напишите
-                повод и дату, остальное обсудим при разговоре.
-              </p>
-            </div>
-            <div className="md:col-span-6 md:col-start-7">
-              <RequestForm
-                endpoint="/custom-cakes/consultation"
-                bodyFormat="multipart"
-                messageField="description"
-                messageLabel="Пожелания по торту"
-                messagePlaceholder="Повод, желаемая дата, количество гостей, идеи по оформлению"
-                submitLabel="Отправить заявку"
+      {info ? (
+        <>
+          <section aria-labelledby="prices-title" className="mt-20 xl:mt-[118px]">
+            <RevealText as="h2" id="prices-title" className={SECTION_TITLE}>
+              Цены
+            </RevealText>
+            {info.prices_intro ? (
+              <Reveal as="p" className="mt-[2px] text-[17px] leading-7 text-ink-muted">
+                {typograf(info.prices_intro)}
+              </Reveal>
+            ) : null}
+            <RevealGroup
+              as="ul"
+              className="mt-10 grid border-y border-line lg:grid-cols-[450px_1fr_1fr] xl:mt-[45px]"
+            >
+              {info.prices.map((price, index) => (
+                <li
+                  key={price.decoration}
+                  className={`py-[25px] ${index > 0 ? "border-line max-lg:border-t lg:border-l lg:pl-8" : ""}`}
+                >
+                  <p className="text-[13px] leading-5 text-ink-subtle">{typograf(price.label)}</p>
+                  <p className="mt-[14px] font-display text-[40px] leading-[44px] text-ink max-sm:text-[32px]">
+                    от {formatPrice(price.price_per_kg)}/кг
+                  </p>
+                  <p className="mt-[18px] text-[14px] leading-5 text-ink-muted">
+                    {typograf(price.note)}
+                  </p>
+                </li>
+              ))}
+            </RevealGroup>
+            {info.prices_note ? (
+              <Reveal as="p" className="mt-[26px] text-[14px] leading-5 text-ink-muted">
+                {typograf(info.prices_note)}
+              </Reveal>
+            ) : null}
+          </section>
+
+          <section
+            id="fillings"
+            aria-labelledby="fillings-title"
+            className="mt-20 scroll-mt-28 xl:mt-[118px]"
+          >
+            <RevealText as="h2" id="fillings-title" className={SECTION_TITLE}>
+              Начинки
+            </RevealText>
+            {info.fillings_intro ? (
+              <Reveal
+                as="p"
+                className="mt-0 max-w-[720px] text-[17px] leading-[31px] text-ink-muted"
+              >
+                {typograf(info.fillings_intro)}
+              </Reveal>
+            ) : null}
+            <FillingsSection
+              fillings={fillings.length > 0 ? fillings : info.fillings}
+              tastingSet={info.tasting_set ?? null}
+            />
+          </section>
+
+          {info.stages.length > 0 ? (
+            <section aria-labelledby="order-title" className="mt-20 xl:mt-[117px]">
+              <RevealText as="h2" id="order-title" className={SECTION_TITLE}>
+                Как заказать
+              </RevealText>
+              <RevealGroup
+                as="ol"
+                className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:mt-[47px]"
+              >
+                {info.stages.map((stage, index) => (
+                  <li key={stage.title}>
+                    <p className="text-[14px] leading-5 text-ink-subtle tabular-nums">
+                      {String(index + 1).padStart(2, "0")}
+                    </p>
+                    <h3 className="mt-4 font-display text-[28px] leading-8 text-ink lg:mt-[56px]">
+                      {typograf(stage.title)}
+                    </h3>
+                    {stage.duration ? (
+                      <p className="mt-[12px] text-[15px] leading-6 font-semibold text-accent">
+                        {typograf(stage.duration)}
+                      </p>
+                    ) : null}
+                    <p className="mt-[16px] text-[15px] leading-[26px] text-ink-muted">
+                      {typograf(stage.text)}
+                    </p>
+                  </li>
+                ))}
+              </RevealGroup>
+              {info.order_facts.length > 0 ? (
+                <Reveal
+                  as="dl"
+                  className="mt-12 grid bg-photo sm:grid-cols-2 lg:grid-cols-4 xl:mt-[49px] [&>div+div]:border-line max-lg:[&>div+div]:border-t lg:[&>div+div]:border-l"
+                >
+                  {info.order_facts.map((fact) => (
+                    <div
+                      key={fact.label}
+                      className="flex flex-col-reverse px-7 pt-[25px] pb-[24px]"
+                    >
+                      <dd className="mt-[9px] font-display text-[26px] leading-8 text-ink">
+                        {typograf(fact.value)}
+                      </dd>
+                      <dt className="text-[13px] leading-5 text-ink-subtle">{fact.label}</dt>
+                    </div>
+                  ))}
+                </Reveal>
+              ) : null}
+            </section>
+          ) : null}
+
+          {info.faq.length > 0 ? (
+            <section aria-labelledby="faq-title" className="mt-20 xl:mt-[117px]">
+              <RevealText as="h2" id="faq-title" className={SECTION_TITLE}>
+                Вопросы
+              </RevealText>
+              {/* Все свёрнуты, как на главной (решение заказчика 30.09); в кадре первый раскрыт */}
+              <FaqColumns
+                items={info.faq}
+                initiallyOpen={[]}
+                buttonClassName="pt-[39px] pb-[19px]"
+                answerClassName="pt-[9px] pb-[22px]"
+                className="mt-10 xl:mt-[27px]"
               />
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
+              <JsonLd data={faqJsonLd(info.faq)} />
+            </section>
+          ) : null}
+        </>
+      ) : null}
+
+      {list.items.length > 0 ? <JsonLd data={designsJsonLd(list.items)} /> : null}
+    </div>
   );
 }

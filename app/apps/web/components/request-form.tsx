@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Checkbox, Field, Input, Textarea } from "@/components/ui";
 import { ApiError, apiFetch } from "@/lib/api";
+import { reachGoal } from "@/lib/metrika";
 
 /**
  * Поля формы в multipart/form-data.
@@ -79,6 +80,8 @@ export function RequestForm({
         body: bodyFormat === "multipart" ? toFormData(fields) : JSON.stringify(fields),
       });
       setStatus("sent");
+      // Цель только для заявки на торт; форма обратной связи на контактах — не она
+      if (endpoint.includes("consultation")) reachGoal("custom_cake_request");
     } catch (error) {
       setStatus("idle");
       if (error instanceof ApiError && error.fieldErrors) setErrors(error.fieldErrors);
@@ -110,7 +113,7 @@ export function RequestForm({
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel"
             inputMode="tel"
-            placeholder="+7 900 000-00-00"
+            placeholder="+7 (900) 000-00-00"
           />
         </Field>
       </div>
@@ -139,7 +142,16 @@ export function RequestForm({
         error={errors.consent_pd}
         label={
           <>
-            Согласен на обработку персональных данных в соответствии с{" "}
+            Согласен на{" "}
+            <a
+              href="/consent"
+              className="text-accent underline underline-offset-2"
+              target="_blank"
+              rel="noreferrer"
+            >
+              обработку персональных данных
+            </a>{" "}
+            в соответствии с{" "}
             <a
               href="/privacy"
               className="text-accent underline underline-offset-2"

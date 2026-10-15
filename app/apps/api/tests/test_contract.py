@@ -16,15 +16,27 @@ PUBLIC_PATHS = {
     "/api/v1/catalog/filters",
     "/api/v1/catalog/products",
     "/api/v1/catalog/products/{slug}",
+    # Sitemap и перенос адресов старого сайта (012)
+    "/api/v1/catalog/sitemap",
+    "/api/v1/legacy/resolve",
+    # Торты на заказ (008a)
     "/api/v1/custom-cakes",
-    "/api/v1/custom-cakes/consultation",
+    "/api/v1/custom-cakes/info",
+    "/api/v1/custom-cakes/fillings",
+    "/api/v1/custom-cakes/estimate",
+    "/api/v1/custom-cakes/{slug}",
+    "/api/v1/consultations",
+    "/api/v1/gallery/{item_id}",
     "/api/v1/gallery",
     "/api/v1/reviews",
     "/api/v1/pages/{page_key}",
+    # Главная и контакты — отдельно: у их content в схеме есть типы
+    "/api/v1/pages/home",
+    "/api/v1/pages/contacts",
     "/api/v1/contacts/feedback",
     "/api/v1/cart",
     "/api/v1/cart/items",
-    "/api/v1/cart/items/{product_id}",
+    "/api/v1/cart/items/{item_id}",
     "/api/v1/orders",
     "/api/v1/orders/{order_number}",
 }
@@ -44,8 +56,8 @@ def test_contract_paths_present() -> None:
 
 
 def test_consultation_accepts_multipart() -> None:
-    """Заявка на торт принимает фото-референс, поэтому тело — multipart/form-data."""
-    body = app.openapi()["paths"]["/api/v1/custom-cakes/consultation"]["post"]["requestBody"]
+    """Заявка на торт принимает до 5 фото-образцов, поэтому тело — multipart/form-data."""
+    body = app.openapi()["paths"]["/api/v1/consultations"]["post"]["requestBody"]
     assert "multipart/form-data" in body["content"]
 
 
@@ -56,7 +68,7 @@ def test_cart_mutations_are_never_get() -> None:
 
     assert set(paths["/api/v1/cart"]) == {"get", "delete"}
     assert set(paths["/api/v1/cart/items"]) == {"post"}
-    assert set(paths["/api/v1/cart/items/{product_id}"]) == {"patch", "delete"}
+    assert set(paths["/api/v1/cart/items/{item_id}"]) == {"patch", "delete"}
 
 
 def test_admin_paths_are_separate_from_public() -> None:

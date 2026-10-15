@@ -1,11 +1,72 @@
-import Link from "next/link";
-import { ProductCard } from "@/components/product-card";
-import { Card, ImagePlaceholder, LinkButton, Price, SectionHeader } from "@/components/ui";
-import { apiGet, type Page, type ProductListItem, type Review } from "@/lib/api";
+/**
+ * Главная по макету new/design/1512.png, сверху вниз:
+ * герой с видео, бегущая строка, «Готово сегодня», «Сделано на заказ»
+ * (задание 004), «Вкус изнутри», «Торт под событие», блок Елены,
+ * «Кондитерская на Гжатской», «Что говорят гости», «Вопросы» (задание 004b).
+ *
+ * Тексты — из PageContent[home].content (правятся в админке, схема
+ * `HomeContent` на бэкенде), контакты — из PageContent[contacts], товары,
+ * работы, начинки, этапы и отзывы — из API. Каждая секция получает данные
+ * независимо: ошибка одного запроса убирает свою секцию, а не всю страницу.
+ */
+
+import type { Metadata } from "next";
+import { Carousel, EndTile } from "@/components/carousel";
+import { Author } from "@/components/home/author";
+import { Bakery } from "@/components/home/bakery";
+import { EventCake, readStages } from "@/components/home/event-cake";
+import { Faq } from "@/components/home/faq";
+import { Fillings } from "@/components/home/fillings";
+import { GuestReviews } from "@/components/home/guest-reviews";
+import { Hero } from "@/components/home/hero";
+import { Ticker } from "@/components/home/ticker";
+import { READY_TODAY_QUERY, ReadyToday } from "@/components/ready-today";
+import { LinkButton } from "@/components/ui";
+import { JsonLd } from "@/components/json-ld";
+import { WorkCard } from "@/components/work-card";
+import {
+  apiGet,
+  type CatalogFilters,
+  type ContactsPage,
+  type CustomCakesInfo,
+  type GalleryItem,
+  type HomeContent,
+  type HomePage,
+  type Page,
+  type ProductListItem,
+  type Review,
+} from "@/lib/api";
+import { typograf } from "@/lib/format";
+import { bakeryJsonLd, faqJsonLd, websiteJsonLd } from "@/lib/json-ld";
+import { pageMetadata, SITE_NAME } from "@/lib/seo";
 
 export const revalidate = 300;
 
-/** Ошибка одной секции не должна ронять всю главную — изоляция ошибок по блокам. */
+/** Сколько начинок в «Вкусе изнутри»: список на макете — пять пунктов. */
+const FILLINGS_ON_HOME = 5;
+
+/**
+ * Значения по умолчанию — тексты макета для верха страницы. Нужны, если
+ * в админке блок ещё не заполнен: герой и витрина не должны остаться без
+ * заголовка. Блоки низа страницы без контента просто не показываются.
+ */
+const DEFAULTS = {
+  hero: {
+    title_lines: ["Торты и десерты", "по авторским рецептурам", "Елены Абрикосовой"],
+    subtitle_lines: [
+      "Готовим для вас как для себя и своей семьи.",
+      "Елена придумывает вкус, вы выбираете повод.",
+    ],
+    cta: { label: "Открыть витрину", href: "/catalog" },
+  },
+  made_to_order: {
+    title: "Сделано на заказ",
+    subtitle:
+      "Каждый торт Елена собирает под дату и повод. Под фото указано, на сколько гостей он был рассчитан.",
+    cta: { label: "Посмотреть все работы", href: "/gallery" },
+  },
+} satisfies Pick<Required<HomeContent>, "hero" | "made_to_order">;
+
 async function safeGet<T>(path: string, fallback: T): Promise<T> {
   try {
     return await apiGet<T>(path);
@@ -14,210 +75,121 @@ async function safeGet<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
-const ADVANTAGES = [
-  { title: "Натуральный состав", text: "Сливки, масло, ягоды. Без растительных заменителей." },
-  { title: "Ручная работа", text: "Каждый торт собирается под конкретный заказ." },
-  { title: "Доставка", text: "Привезём в согласованное время, в термоупаковке." },
-  { title: "Свой дизайн", text: "Оформление под повод — от лаконичного до сложного." },
-];
+/**
+ * Заголовок и описание главной — из контента (герой правится в админке), с запасным
+ * текстом макета. Те же запросы, что у страницы: Next отдаст их из кэша fetch.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const [page, contacts] = await Promise.all([
+    safeGet<HomePage | null>("/pages/home", null),
+    safeGet<ContactsPage | null>("/pages/contacts", null),
+  ]);
+  const hero = page?.content?.hero ?? DEFAULTS.hero;
+  const where = contacts?.address
+    ? `Витрина: ${contacts.address}, доставка по Москве.`
+    : "Доставка по Москве.";
+  return pageMetadata({
+    title: SITE_NAME,
+    description: `${hero.subtitle_lines.join(" ")} ${where}`,
+    path: "/",
+    absoluteTitle: true,
+  });
+}
 
 export default async function HomePage() {
   const empty = { items: [], total: 0, page: 1, page_size: 0 };
-  const [featured, reviews] = await Promise.all([
-    safeGet<Page<ProductListItem>>("/catalog/products?is_featured=true&page_size=8", empty),
-    safeGet<Page<Review>>("/reviews?page_size=5", empty),
+  const [page, contacts, ready, works, filters, customCakes, reviews] = await Promise.all([
+    safeGet<HomePage | null>("/pages/home", null),
+    safeGet<ContactsPage | null>("/pages/contacts", null),
+    // Порядок — поле order из админки (сортировка API по умолчанию)
+    safeGet<Page<ProductListItem>>(READY_TODAY_QUERY, empty),
+    safeGet<Page<GalleryItem>>("/gallery?page_size=8", empty),
+    safeGet<CatalogFilters | null>("/catalog/filters", null),
+    // Начинки (по order) и этапы заказа — с данных страницы «Торты на заказ» (008a)
+    safeGet<CustomCakesInfo | null>("/custom-cakes/info", null),
+    safeGet<Page<Review>>("/reviews?source=yandex&page_size=3", empty),
   ]);
 
-  // Минимальная цена среди популярных позиций — ориентир «от» под финальным CTA
-  const minPrice = featured.items.reduce<string | null>(
-    (min, item) =>
-      min === null || Number.parseFloat(item.price) < Number.parseFloat(min) ? item.price : min,
-    null,
-  );
+  const content = page?.content;
+  const hero = content?.hero ?? DEFAULTS.hero;
+  const madeToOrder = content?.made_to_order ?? DEFAULTS.made_to_order;
+  const occasionLabels = new Map(filters?.occasions.map((o) => [o.value, o.label]) ?? []);
+  const fillings = customCakes?.fillings.slice(0, FILLINGS_ON_HOME) ?? [];
+  const stages = readStages({ stages: customCakes?.stages });
+  const faq = content?.faq ?? [];
 
   return (
-    <>
-      {/*
-        Hero-бенто: крупный заголовок занимает всю ширину, под ним плитки
-        разного размера. Главное фото шире остальных — оно и держит композицию.
-      */}
-      <section className="container-page pt-10 md:pt-16">
-        <p className="eyebrow mb-6">Ручная работа · Москва</p>
+    <div className="home-page">
+      <Hero content={hero} />
+      <Ticker items={content?.ticker ?? []} />
 
-        <h1 className="max-w-[16ch] text-5xl">Торты, ради которых возвращаются</h1>
-
-        <div className="mt-10 flex flex-col gap-6 md:mt-14 md:flex-row md:items-end md:justify-between">
-          <p className="max-w-xl text-lg text-ink-muted">
-            Десерты на заказ из натуральных ингредиентов. Оформление обсуждаем лично, оплата — при
-            получении.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <LinkButton href="/catalog">Смотреть каталог</LinkButton>
-            <LinkButton href="/custom-cakes" variant="secondary">
-              Торт на заказ
-            </LinkButton>
-          </div>
+      {ready.items.length > 0 ? (
+        <div className="home-ready container-page py-20 lg:pt-[129px] lg:pb-32">
+          <ReadyToday content={content?.ready_today} items={ready.items} />
         </div>
+      ) : null}
 
-        <div className="bento mt-10 md:mt-14">
-          <div className="bento-tile col-span-2 row-span-2 md:col-span-2 md:row-span-3">
-            <ImagePlaceholder fill label="главное фото" />
-          </div>
-
-          <div className="bento-tile col-span-1 row-span-1 md:col-span-1 md:row-span-2">
-            <ImagePlaceholder fill label="фото" />
-          </div>
-
-          <div className="bento-tile col-span-1 row-span-1 flex flex-col justify-between p-5 md:col-span-1 md:row-span-1 md:p-6">
-            <p className="eyebrow">Опыт</p>
-            <p className="tnum font-display text-4xl leading-none">9 лет</p>
-          </div>
-
-          <div className="bento-tile col-span-2 row-span-1 flex flex-col justify-between p-5 md:col-span-1 md:row-span-1 md:p-6">
-            <p className="eyebrow">Собрано тортов</p>
-            <p className="tnum font-display text-4xl leading-none">2400+</p>
-          </div>
-
-          <div className="bento-tile col-span-2 row-span-1 md:col-span-2 md:row-span-1">
-            <ImagePlaceholder fill label="фото процесса" />
-          </div>
-        </div>
-      </section>
-
-      {featured.items.length > 0 ? (
-        <section className="container-page section">
-          <SectionHeader
-            eyebrow="Витрина"
-            title="Популярные позиции"
+      {/* Снизу 126, а не 128: у карточки работы с названием в одну строку
+          (line-clamp) бокс на 2px выше макетного — секция = 1106px, как на макете */}
+      {works.items.length > 0 ? (
+        <div className="home-works container-page pb-20 lg:pt-32 lg:pb-[126px]">
+          <Carousel
+            title={madeToOrder.title}
+            subtitle={madeToOrder.subtitle}
+            subtitleGap="mt-[16.6px]"
+            itemClassName="w-[85vw] sm:w-[456px]"
+            align="start"
             action={
-              <Link
-                href="/catalog"
-                className="text-sm text-ink-muted transition-colors duration-150 hover:text-accent"
-              >
-                Весь каталог →
-              </Link>
-            }
-          />
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-            {featured.items.slice(0, 4).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* Преимущества тоже бенто: первая плитка крупнее — она несёт главный довод */}
-      <section className="border-y border-line bg-surface">
-        <div className="container-page section">
-          <SectionHeader eyebrow="Почему мы" title="Четыре причины заказать" />
-
-          <div className="bento">
-            {ADVANTAGES.map((item, index) => (
-              <div
-                key={item.title}
-                className={`bento-tile flex flex-col justify-between p-6 md:p-8 ${
-                  index === 0
-                    ? "col-span-2 row-span-2 md:col-span-2 md:row-span-2"
-                    : "col-span-2 row-span-1 md:col-span-2 md:row-span-1"
-                }`}
-              >
-                <p className="tnum text-2xs text-ink-subtle">
-                  {String(index + 1).padStart(2, "0")}
-                </p>
-                <div>
-                  <h3 className={index === 0 ? "text-2xl" : "text-lg"}>{item.title}</h3>
-                  <p
-                    className={`mt-2 text-ink-muted ${index === 0 ? "max-w-sm text-base" : "text-sm"}`}
-                  >
-                    {item.text}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="container-page section">
-        <div className="grid items-center gap-10 md:grid-cols-12 md:gap-16">
-          <div className="md:col-span-5">
-            <ImagePlaceholder ratio="3/2" label="фото кондитера" className="rounded-xl" />
-          </div>
-          <div className="md:col-span-6 md:col-start-7">
-            <p className="eyebrow mb-5">О бренде</p>
-            <h2 className="text-3xl">Небольшая мастерская, а не фабрика</h2>
-            <p className="mt-6 max-w-lg text-lg text-ink-muted">
-              Мы не держим витрину с готовой продукцией: каждый заказ собирается под дату получения.
-              Поэтому состав всегда свежий, а оформление — ваше, а не типовое.
-            </p>
-            <div className="mt-8">
-              <LinkButton href="/about" variant="secondary">
-                Подробнее о нас
+              <LinkButton href={madeToOrder.cta.href} variant="outline" size="md">
+                {typograf(madeToOrder.cta.label)}
               </LinkButton>
-            </div>
-          </div>
+            }
+          >
+            {[
+              ...works.items.map((work) => (
+                <WorkCard
+                  key={work.id}
+                  title={work.caption}
+                  image={work.image_key}
+                  secondImage={work.detail_image_key}
+                  occasion={work.occasion}
+                  occasionLabel={work.occasion ? occasionLabels.get(work.occasion) : null}
+                  madeIn={work.made_in}
+                  tiers={work.tiers}
+                  weightGrams={work.weight_grams}
+                  guests={work.guests}
+                  orderHref={`/custom-cakes?like=${work.id}`}
+                />
+              )),
+              <EndTile key="all-works" href="/gallery" total={works.total} />,
+            ]}
+          </Carousel>
         </div>
-      </section>
-
-      {reviews.items.length > 0 ? (
-        <section className="border-t border-line bg-surface">
-          <div className="container-page section">
-            <SectionHeader eyebrow="Отзывы" title="Что говорят гости" />
-            <div className="grid gap-4 md:grid-cols-3 md:gap-6">
-              {reviews.items.slice(0, 3).map((review) => (
-                <Card key={review.id} className="flex h-full flex-col p-7 md:p-8">
-                  {review.rating ? (
-                    <p
-                      className="tnum mb-4 text-sm text-accent"
-                      aria-label={`Оценка ${review.rating} из 5`}
-                    >
-                      {"★".repeat(review.rating)}
-                      <span className="text-line-strong">{"★".repeat(5 - review.rating)}</span>
-                    </p>
-                  ) : null}
-                  <blockquote className="flex-1 text-base leading-relaxed text-ink-muted">
-                    {review.text}
-                  </blockquote>
-                  <figcaption className="mt-6 text-xs text-ink-subtle">
-                    {review.author_name}
-                  </figcaption>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
       ) : null}
 
-      <section className="container-page section">
-        <div className="rounded-2xl bg-accent px-6 py-20 text-center text-white md:px-16 md:py-28">
-          <h2 className="mx-auto max-w-[14ch] text-4xl text-white">Готовы обсудить заказ?</h2>
-          <p className="mx-auto mt-6 max-w-md text-base text-white/75">
-            Выберите готовую позицию в каталоге или расскажите, каким видите свой торт.
-          </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/catalog"
-              className="inline-flex min-h-11 items-center rounded-md bg-white px-6 text-sm font-medium text-accent transition-[background-color,scale] duration-150 hover:bg-white/90 active:scale-[0.96]"
-            >
-              В каталог
-            </Link>
-            <Link
-              href="/custom-cakes"
-              className="inline-flex min-h-11 items-center rounded-md px-6 text-sm font-medium text-white ring-1 ring-inset ring-white/35 transition-[background-color,scale] duration-150 hover:bg-white/10 active:scale-[0.96]"
-            >
-              Обсудить свой торт
-            </Link>
-          </div>
+      {fillings.length > 0 ? (
+        <Fillings fillings={fillings} intro={content?.fillings_intro ?? []} />
+      ) : null}
 
-          {/* Ценовой ориентир держим рядом с CTA — вопрос «сколько стоит» возникает здесь */}
-          {minPrice ? (
-            <p className="mt-10 text-xs text-white/60">
-              Готовые позиции от <Price value={minPrice} /> · Торты на заказ обсуждаются
-              индивидуально
-            </p>
-          ) : null}
-        </div>
-      </section>
-    </>
+      {stages.length > 0 || content?.order_banner ? (
+        <EventCake stages={stages} banner={content?.order_banner} />
+      ) : null}
+
+      {content?.author ? <Author author={content.author} /> : null}
+
+      {contacts ? <Bakery contacts={contacts} /> : null}
+
+      {contacts ? <GuestReviews contacts={contacts} reviews={reviews.items} /> : null}
+
+      {/* Видимые вопросы и FAQPage — из одного массива content.faq */}
+      {faq.length > 0 ? (
+        <>
+          <Faq items={faq} />
+          <JsonLd data={faqJsonLd(faq)} />
+        </>
+      ) : null}
+
+      <JsonLd data={[bakeryJsonLd(contacts), websiteJsonLd()]} />
+    </div>
   );
 }

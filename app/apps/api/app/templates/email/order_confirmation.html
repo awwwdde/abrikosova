@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Заказ № {{ d.order_number }} принят</title>
+</head>
+{# Почтовые клиенты понимают только простую разметку: таблицы и встроенные стили #}
+<body style="margin:0;padding:0;background:#fbf7f0;font-family:Arial,Helvetica,sans-serif;color:#1a1210;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbf7f0;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e5dccb;">
+          <tr>
+            <td style="background:#842124;padding:20px 28px;">
+              <img src="{{ d.logo_url }}" alt="{{ bakery }}" width="140" style="display:block;border:0;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 28px 8px;">
+              <h1 style="margin:0;font-size:24px;line-height:30px;font-weight:normal;color:#842124;">Заказ № {{ d.order_number }} принят</h1>
+              <p style="margin:12px 0 0;font-size:15px;line-height:22px;color:#5a524f;">
+                {% if d.after_hours %}
+                Заказ пришёл вне рабочих часов, поэтому позвоним утром после {{ d.work_start }}:00 и подтвердим состав, дату и сумму.
+                {% else %}
+                Позвоним в течение 30 минут, подтвердим состав, дату и сумму и назовём способы оплаты.
+                {% endif %}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px 0;">
+              <h2 style="margin:0 0 8px;font-size:16px;color:#1a1210;">Состав заказа</h2>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;">
+                {% for line in d.lines %}
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;">
+                    {{ line.name }}<br>
+                    <span style="color:#918f8b;">{{ line.details }} × {{ line.quantity }}</span>
+                  </td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;white-space:nowrap;">{{ line.total }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;color:#5a524f;">Позиции</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;">{{ d.subtotal }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;color:#5a524f;">{{ d.method }}</td>
+                  <td align="right" style="padding:4px 0;">{{ d.delivery }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-top:1px solid #e5dccb;font-weight:bold;">Итого</td>
+                  <td align="right" style="padding:8px 0;border-top:1px solid #e5dccb;font-weight:bold;">{{ d.total }}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px 0;font-size:14px;line-height:21px;">
+              <p style="margin:0;"><b>{{ d.method }}</b>{% if d.when %}: {{ d.when }}{% endif %}</p>
+              {% if d.address %}
+              <p style="margin:4px 0 0;">{{ d.address }}</p>
+              {% endif %}
+              <p style="margin:12px 0 0;color:#5a524f;">Оплата после подтверждения.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 28px 0;">
+              <a href="{{ d.order_url }}" style="display:inline-block;background:#842124;color:#fbf7f0;text-decoration:none;font-size:14px;padding:12px 22px;">Посмотреть заказ</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 28px 28px;font-size:13px;line-height:20px;color:#5a524f;">
+              {% if d.phone %}Телефон: {{ d.phone }}<br>{% endif %}
+              {% if d.telegram_url %}<a href="{{ d.telegram_url }}" style="color:#842124;">Написать в Telegram</a><br>{% endif %}
+              {% if d.work_hours %}{{ d.work_hours }}<br>{% endif %}
+              {{ bakery }}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

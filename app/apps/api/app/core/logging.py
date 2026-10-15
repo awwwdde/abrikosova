@@ -6,7 +6,8 @@ import sys
 # и импорт всех своих плагинов при первой загрузке). Среди них тонут наши
 # собственные сообщения, а полезного для отладки приложения там почти нет.
 # Предупреждения и ошибки от них по-прежнему видны.
-NOISY_LOGGERS = ("botocore", "boto3", "urllib3", "s3transfer", "PIL")
+# HTTP-клиент пишет полный URL: в Telegram Bot API путь содержит секрет бота.
+NOISY_LOGGERS = ("botocore", "boto3", "urllib3", "s3transfer", "PIL", "httpx", "httpcore")
 
 
 def setup_logging(debug: bool = False, *, sql_echo: bool = False) -> None:

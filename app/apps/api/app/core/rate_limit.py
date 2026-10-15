@@ -4,14 +4,16 @@
 Применяется к публичным мутирующим эндпоинтам: заказы, заявки, форма обратной
 связи, добавление в корзину, а также к входу в админку (защита от подбора пароля).
 
-Алгоритм — фиксированное окно на INCR+EXPIRE: для этой задачи его достаточно,
-он дёшев и не требует Lua-скриптов. Ключ строится по IP и имени лимита.
+Алгоритм — фиксированное окно с атомарными INCR+EXPIRE.
+Ключ строится по проверенному IP и имени лимита.
 """
 
 import logging
+from ipaddress import ip_address, ip_network
 
 from fastapi import HTTPException, Request, status
 
+from app.core.config import get_settings
 from app.core.redis import get_redis
 
 logger = logging.getLogger(__name__)
@@ -20,15 +22,28 @@ _PREFIX = "ratelimit:"
 
 
 def client_ip(request: Request) -> str:
-    """IP клиента с учётом реверс-прокси хостинга.
+    """Идём справа налево только через явно доверенные узлы цепочки прокси."""
+    peer = request.client.host if request.client else "unknown"
+    trusted = [ip_network(value, strict=False) for value in get_settings().trusted_proxy_networks]
 
-    Доверяем только первому значению X-Forwarded-For и только потому, что перед
-    приложением на Timeweb Cloud App Platform всегда стоит их балансировщик.
-    """
+    def is_trusted(value: str) -> bool:
+        return any(ip_address(value) in network for network in trusted)
+
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    try:
+        if not forwarded or not is_trusted(peer):
+            return peer
+        chain = forwarded.split(",")
+        if len(chain) > 32:
+            return peer
+        current = peer
+        for item in reversed(chain):
+            if not is_trusted(current):
+                break
+            current = str(ip_address(item.strip()))
+        return current
+    except ValueError:
+        return peer
 
 
 class RateLimiter:
@@ -43,9 +58,14 @@ class RateLimiter:
         key = f"{_PREFIX}{self.name}:{client_ip(request)}"
         redis = get_redis()
 
-        current = await redis.incr(key)
-        if current == 1:
-            await redis.expire(key, self.window_seconds)
+        # Атомарно: остановка процесса между INCR и EXPIRE не оставит вечный бан.
+        current = await redis.eval(
+            "local n = redis.call('INCR', KEYS[1]); "
+            "if n == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end; return n",
+            1,
+            key,
+            self.window_seconds,
+        )
 
         if current > self.limit:
             logger.warning(

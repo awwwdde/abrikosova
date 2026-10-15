@@ -1,27 +1,21 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { NotFoundPage } from "@/components/not-found-page";
+import { PublicShell } from "@/components/public-shell";
+
+/**
+ * 404 для адресов, которых нет вовсе, и для несуществующего или снятого товара
+ * (middleware переписывает его сюда, 006). Файл лежит вне группы (public),
+ * поэтому каркас подключается здесь. Содержимое — общий NotFoundPage (010b).
+ */
+export const metadata: Metadata = {
+  title: "Страница не найдена",
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (
-    <div className="container-page flex min-h-screen flex-col items-center justify-center py-16 text-center">
-      <p className="eyebrow">Ошибка 404</p>
-      <h1 className="mt-4 text-3xl md:text-4xl">Такой страницы нет</h1>
-      <p className="mt-4 max-w-sm text-sm text-ink-muted">
-        Возможно, ссылка устарела или в адресе опечатка. Загляните в каталог — там всё на месте.
-      </p>
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link
-          href="/"
-          className="inline-flex min-h-10 items-center rounded-md bg-accent px-5 text-sm font-medium text-white shadow-raised transition-[background-color,scale] duration-150 hover:bg-accent-hover active:scale-[0.96]"
-        >
-          На главную
-        </Link>
-        <Link
-          href="/catalog"
-          className="inline-flex min-h-10 items-center rounded-md bg-surface px-5 text-sm font-medium shadow-raised transition-[background-color,scale] duration-150 hover:bg-surface-sunken active:scale-[0.96]"
-        >
-          В каталог
-        </Link>
-      </div>
-    </div>
+    <PublicShell>
+      <NotFoundPage />
+    </PublicShell>
   );
 }

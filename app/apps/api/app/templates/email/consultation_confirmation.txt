@@ -1,0 +1,33 @@
+{{ bakery }}
+
+Заявка № {{ d.number }} принята
+{{ d.title }}
+
+Елена позвонит в течение дня, назовёт вес, срок и стоимость и поможет с начинкой.
+
+Гостей: {{ d.guests }}, вес около {{ d.weight }}
+Ориентир: {{ d.estimate }}
+Начинка: {{ d.filling }}
+{% if d.extras %}
+Дополнительно: {{ d.extras | join(", ") }}
+{% endif %}
+Получение: {{ d.method }}
+{% if d.wishes %}
+Пожелания: {{ d.wishes }}
+{% endif %}
+{% if d.references %}
+Фото-образцов: {{ d.references }}
+{% endif %}
+
+Ориентир — не итог: точную сумму назовём после расчёта.
+
+Связаться с нами:
+{% if d.phone %}
+Телефон: {{ d.phone }}
+{% endif %}
+{% if d.telegram_url %}
+Telegram: {{ d.telegram_url }}
+{% endif %}
+{% if d.work_hours %}
+{{ d.work_hours }}
+{% endif %}
