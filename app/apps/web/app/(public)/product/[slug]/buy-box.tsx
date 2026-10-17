@@ -25,6 +25,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useCart } from "@/components/cart-context";
+import { FloatingActionBar } from "@/components/floating-action-bar";
 import { OptionRow, Price } from "@/components/ui";
 import type { ProductDetail } from "@/lib/api";
 import { typograf } from "@/lib/format";
@@ -74,6 +75,7 @@ export function BuyBox({
   const [priceHidden, setPriceHidden] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const priceRow = useRef<HTMLDivElement>(null);
+  const mobilePriceRow = useRef<HTMLDivElement>(null);
   const radios = useRef<(HTMLButtonElement | null)[]>([]);
 
   const variant = pickVariant(product.variants, String(variantId));
@@ -89,9 +91,12 @@ export function BuyBox({
   // а не IntersectionObserver: при прыжке прокрутки (якорь, быстрый флик) строка
   // проскакивает экран целиком, пересечения не случается и наблюдатель молчит
   useEffect(() => {
-    const row = priceRow.current;
-    if (!row) return;
-    const update = () => setPriceHidden(row.getBoundingClientRect().bottom < 0);
+    const update = () => {
+      const row = window.matchMedia("(max-width: 639px)").matches
+        ? mobilePriceRow.current
+        : priceRow.current;
+      setPriceHidden(Boolean(row && row.getBoundingClientRect().bottom < 0));
+    };
     update();
     window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
@@ -166,8 +171,51 @@ export function BuyBox({
 
   return (
     <>
+      <div
+        ref={mobilePriceRow}
+        data-product-mobile-buy
+        className="-mx-4 mt-5 flex items-center justify-between gap-4 bg-canvas px-4 py-4 shadow-[0_-4px_16px_rgb(26_18_16/0.04)] sm:hidden"
+      >
+        <div className="min-w-0 flex-1">
+          <Price
+            value={String(price)}
+            className="block text-[24px] leading-7 font-bold text-ink tabular-nums"
+          />
+          {product.variants.length > 1 ? (
+            <div className="relative w-fit max-w-full">
+              <select
+                aria-label={showWeight ? "Вес торта" : "Вариант товара"}
+                value={variant.id}
+                onChange={(event) => choose(Number(event.target.value))}
+                className="block h-6 max-w-full appearance-none bg-transparent pr-4 text-xs leading-6 text-ink-muted focus:outline-accent"
+              >
+                {product.variants.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {[item.label, formatPeople(item.portions_min, item.portions_max)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </option>
+                ))}
+              </select>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 10 6"
+                className="pointer-events-none absolute top-2 right-0 h-1.5 w-2.5 fill-none stroke-current text-ink-muted"
+              >
+                <path d="m1 1 4 4 4-4" />
+              </svg>
+            </div>
+          ) : (
+            <p className="text-xs leading-6 text-ink-muted">
+              {[variant.label, people].filter(Boolean).join(" · ")}
+            </p>
+          )}
+          {quantity > 1 ? <p className="text-xs text-ink-muted">Количество: {quantity}</p> : null}
+        </div>
+        {button("shrink-0 max-[360px]:px-5")}
+      </div>
       {showWeight ? (
-        <div className="mt-[37px]">
+        <div className="mt-[37px] max-sm:hidden">
           <p id="weight-label" className="text-[13px] leading-none text-ink-subtle">
             Вес
           </p>
@@ -227,7 +275,8 @@ export function BuyBox({
             aside={`+${inscriptionPrice.toLocaleString("ru-RU")} ₽`}
           />
           <div
-            className={`grid transition-[grid-template-rows] duration-300 ease-out-soft ${
+            data-product-inscription-field
+            className={`grid transition-[grid-template-rows] duration-300 ease-out-soft motion-reduce:transition-none ${
               withInscription ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
             }`}
             inert={!withInscription}
@@ -292,7 +341,7 @@ export function BuyBox({
 
       <div
         ref={priceRow}
-        className="mt-[30px] flex flex-wrap items-center justify-between gap-4 max-sm:flex-col max-sm:items-stretch"
+        className="mt-[30px] hidden flex-wrap items-center justify-between gap-4 sm:flex"
       >
         <Price
           value={String(price)}
@@ -358,7 +407,7 @@ export function BuyBox({
       {/* Липкая панель на телефоне: цена ушла за экран, а клавиатура не открыта.
           После добавления — плашка «в корзине» вместо цены */}
       {(priceHidden || inCart) && !typing && availability.orderable ? (
-        <div
+        <FloatingActionBar
           className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t px-4 py-3 sm:hidden ${
             inCart ? "border-ink bg-ink" : "border-line bg-canvas"
           }`}
@@ -374,7 +423,7 @@ export function BuyBox({
               {button("flex-1")}
             </>
           )}
-        </div>
+        </FloatingActionBar>
       ) : null}
     </>
   );

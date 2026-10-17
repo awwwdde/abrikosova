@@ -1,0 +1,942 @@
+/* Мобильные кадры «Кондитерская (3)»: общая шкала и раскладки внутренних страниц. */
+@media (width < 1280px) {
+  .public-page :is(p, h1, h2, h3) {
+    text-wrap: wrap;
+  }
+  .product-summary > p:first-of-type {
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .gallery-page {
+    padding-bottom: 96px;
+  }
+  .gallery-page [data-reveal="group"] {
+    row-gap: 70px;
+  }
+  .gallery-page article h3 {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+  }
+  .gallery-page article > a:last-child {
+    display: inline-block;
+  }
+  .gallery-page article > div:first-child > div:last-child {
+    display: none;
+  }
+  .gallery-page > nav[aria-label="Поводы"] + div > div:last-child:not([data-reveal]) {
+    margin-top: 72px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] {
+    margin-top: 96px;
+  }
+}
+
+@media (640px <= width < 1024px) {
+  .public-site footer > div {
+    padding-bottom: 48px;
+  }
+  .public-site footer > div > div:last-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 11px 24px;
+    margin-top: 48px;
+  }
+  .public-site footer > div > div:last-child > div {
+    display: contents;
+  }
+  .public-site footer > div > div:last-child > div > :is(p, ul) {
+    margin-block: 0;
+  }
+  .public-site footer > div > div:last-child > div > p:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .public-site footer > div > div:last-child > p {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .public-site footer > div > div:last-child > div > ul {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .public-site footer > div > div:last-child > div > p:last-child {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .about-page {
+    padding-top: 28px;
+  }
+  .about-page [aria-labelledby="about-title"] {
+    grid-template-columns: minmax(0, 340fr) minmax(0, 398fr);
+    gap: 32px;
+    margin-top: 26px;
+  }
+  .about-page [aria-labelledby="about-title"] > div:last-child {
+    margin-top: -12px;
+  }
+  .about-page #about-title + p {
+    margin-top: -10px;
+  }
+  .about-page [aria-labelledby="about-title"] blockquote {
+    margin-top: 40px;
+    font-size: 28px;
+    line-height: 36px;
+  }
+  .about-page [aria-labelledby="about-title"] blockquote + div {
+    margin-top: 26px;
+    font-size: 17px;
+    line-height: 30px;
+  }
+  .about-page [aria-labelledby="about-title"] blockquote + div > p {
+    margin-block: 0;
+  }
+  .about-page [aria-labelledby="about-title"] dl {
+    padding-top: 32px;
+  }
+  .about-page [aria-labelledby="about-title"] dd {
+    font-size: 22px;
+    line-height: 28px;
+  }
+  .about-page [aria-labelledby="about-title"] dt {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .about-page [aria-labelledby="timeline-title"] ol,
+  .about-page [aria-labelledby="team-title"] ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .about-page [aria-labelledby="timeline-title"] {
+    margin-top: 78px;
+  }
+  .about-page [aria-labelledby="workflow-title"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 94px;
+  }
+  .about-page [aria-labelledby="workflow-title"] > div:first-child {
+    height: 440px;
+    aspect-ratio: auto;
+  }
+  .about-page [aria-labelledby="workflow-title"] > div:last-child {
+    padding-top: 0;
+  }
+  .about-page [aria-labelledby="workflow-title"] ul {
+    margin-top: 10px;
+  }
+  .about-page [aria-labelledby="workflow-title"] li {
+    padding-bottom: 16px;
+  }
+  .about-page [aria-labelledby="team-title"] {
+    margin-top: 84px;
+  }
+  .public-page {
+    --text-section: 58px;
+  }
+  .contacts-page h1 {
+    font-size: 58px;
+    line-height: 64px;
+  }
+  .gallery-page > div:first-of-type {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 4px;
+    gap: 12px;
+  }
+  .gallery-page > div:first-of-type > p {
+    max-width: none;
+    margin-top: 0;
+  }
+  .gallery-page > nav[aria-label="Поводы"] {
+    margin-top: 32px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 32px 40px 40px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] > div > div:first-child {
+    width: 100%;
+  }
+  .gallery-page #works-cta-title {
+    line-height: 48px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] p {
+    margin-top: 4px;
+    font-size: 17px;
+    line-height: 28px;
+  }
+  .contacts-page > div:first-of-type {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 8px;
+    margin-bottom: 40px;
+    gap: 0;
+  }
+  .contacts-page > div:nth-of-type(2) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .contacts-page dl > div {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .product-page > div:first-of-type,
+  .design-page > div:first-of-type {
+    grid-template-columns: minmax(0, 400fr) minmax(0, 338fr);
+    gap: 32px;
+  }
+  .product-page h1,
+  .design-page h1 {
+    font-size: 44px;
+    line-height: 48px;
+  }
+  .product-page > div:first-of-type > div:first-child {
+    margin-top: 4px;
+  }
+  .product-summary > hr {
+    margin-top: 22px;
+  }
+  .product-summary div:has(> [role="radiogroup"]) {
+    margin-top: 33px;
+  }
+  .product-summary [role="radiogroup"] {
+    margin-top: 12px;
+  }
+  .catalog-page [data-catalog-results] > ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (1024px <= width < 1280px) {
+  .gallery-page {
+    padding-top: 58px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] > div {
+    min-height: 196px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] p {
+    margin-top: 8px;
+    font-size: 17px;
+    line-height: 28px;
+  }
+  .contacts-page {
+    padding-top: 28px;
+    padding-bottom: 96px;
+  }
+  .contacts-page [role="img"] {
+    height: 460px;
+  }
+  .contacts-page :is([aria-labelledby="receiving-title"], [aria-labelledby="legal-title"]) {
+    margin-top: 100px;
+  }
+  .contacts-page section h2 {
+    font-size: 44px;
+    line-height: 48px;
+  }
+  .contacts-page #receiving-title {
+    margin-bottom: 33px;
+  }
+  .contacts-page #legal-title {
+    margin-bottom: 16px;
+  }
+  .catalog-page [data-catalog-results] > ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (width < 640px) {
+  .public-site main {
+    --text-section: 2.5rem;
+    --text-4xl: 2.5rem;
+    --text-item: 1.25rem;
+  }
+
+  .public-page {
+    padding-top: 16px;
+  }
+  .public-page h1 {
+    font-size: 40px;
+    line-height: 44px;
+  }
+  .public-page h1 .reveal-line {
+    overflow-wrap: normal;
+  }
+
+  .catalog-page > div:first-child {
+    padding-top: 0;
+    gap: 0;
+  }
+  .catalog-page h1 {
+    margin-top: 8px;
+  }
+  .catalog-page > div:first-child > p {
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .catalog-page nav[aria-label="Разделы каталога"] a {
+    padding-bottom: 10px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .catalog-page [data-catalog-results] {
+    margin-top: 28px;
+  }
+  .catalog-page article h3 {
+    font-size: 20px;
+    line-height: 24px;
+  }
+
+  .contacts-page > div:first-of-type {
+    margin-top: 12px;
+    margin-bottom: 48px;
+    gap: 4px;
+  }
+  .contacts-page {
+    padding-top: 10px;
+    padding-bottom: 64px;
+  }
+  .contacts-page > div:first-of-type > p {
+    font-size: 17px;
+    line-height: 26px;
+    font-weight: 400;
+  }
+  .contacts-page dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    gap: 0;
+    padding-block: 8px;
+  }
+  .contacts-page dt {
+    font-size: 13px;
+    line-height: 16px;
+  }
+  .contacts-page dd {
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .contacts-page > div:nth-of-type(2) {
+    gap: 16px;
+  }
+  .contacts-page > div:nth-of-type(2) > div:first-child > div:last-child {
+    margin-top: 24px;
+  }
+  .contacts-page h2 {
+    line-height: 44px;
+  }
+  .contacts-page #receiving-title {
+    margin-bottom: 38px;
+  }
+  .contacts-page [aria-labelledby="receiving-title"] > div {
+    gap: 12px;
+  }
+  .contacts-page [aria-labelledby="receiving-title"] article {
+    padding: 24px 20px 20px;
+  }
+  .contacts-page [aria-labelledby="receiving-title"] h3 {
+    font-size: 32px;
+    line-height: 36px;
+  }
+  .contacts-page [aria-labelledby="receiving-title"] article p {
+    line-height: 26px;
+  }
+  .about-page [aria-labelledby="about-title"] {
+    margin-top: 22px;
+    gap: 20px;
+  }
+  .about-page #about-title + p {
+    margin-top: 0;
+    font-size: 16px;
+  }
+  .about-page [aria-labelledby="about-title"] blockquote {
+    margin-top: 42px;
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .about-page [aria-labelledby="about-title"] blockquote + div {
+    margin-top: 23px;
+    line-height: 30px;
+  }
+  .about-page [aria-labelledby="about-title"] blockquote + div > p {
+    margin-block: 0;
+  }
+  .about-page [aria-labelledby="about-title"] blockquote + div > p:not(:last-child) {
+    margin-bottom: 2px;
+  }
+  .about-page [aria-labelledby="about-title"] dl {
+    padding-top: 32px;
+  }
+  .about-page [aria-labelledby="about-title"] dd {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  .about-page [aria-labelledby="about-title"] dt {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .about-page [aria-labelledby="timeline-title"] ol {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .about-page [aria-labelledby="timeline-title"] {
+    margin-top: 50px;
+  }
+  .about-page #timeline-title,
+  .about-page #team-title {
+    line-height: 44px;
+  }
+  .about-page [aria-labelledby="timeline-title"] ol h3 {
+    margin-top: 8px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .about-page [aria-labelledby="timeline-title"] ol h3 + p {
+    margin-top: 4px;
+    line-height: 22px;
+  }
+  .about-page [aria-labelledby="workflow-title"] ul {
+    margin-top: 8px;
+  }
+  .about-page [aria-labelledby="workflow-title"] {
+    margin-top: 78px;
+    gap: 24px;
+  }
+  .about-page [aria-labelledby="workflow-title"] > div:first-child {
+    height: 260px;
+    aspect-ratio: auto;
+  }
+  .about-page [aria-labelledby="team-title"] {
+    margin-top: 60px;
+  }
+  .about-page [aria-labelledby="team-title"] ul {
+    margin-top: 32px;
+    gap: 20px 8px;
+  }
+  .about-page [aria-labelledby="team-title"] h3 {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  .about-page [aria-labelledby="team-title"] h3 + p {
+    margin-top: 12px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .about-page [aria-labelledby="bakery-title"] > div:nth-child(2) {
+    height: 300px;
+    margin-top: 32px;
+  }
+  .about-page [aria-labelledby="bakery-title"] img {
+    object-fit: fill;
+  }
+  .about-page [aria-labelledby="bakery-title"] > div:last-child p {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  .about-page [aria-labelledby="bakery-title"] > div:last-child a {
+    width: 100%;
+    height: 52px;
+    margin-top: 24px;
+  }
+  .about-page [aria-labelledby="reviews-title"] > div:first-child > div:last-child,
+  .about-page [aria-labelledby="reviews-title"] > div:first-child a {
+    width: 100%;
+  }
+  .about-page [aria-labelledby="reviews-title"] dd {
+    font-size: 28px;
+    line-height: 31px;
+  }
+  .about-page [aria-labelledby="reviews-title"] dt {
+    font-size: 14px;
+  }
+  .about-page [aria-labelledby="reviews-title"] {
+    padding-top: 131px;
+  }
+  .about-page [aria-labelledby="about-order-title"] {
+    padding-top: 135px;
+    padding-bottom: 64px;
+  }
+  .about-page [aria-labelledby="about-order-title"] > div {
+    padding: 16px 24px 24px;
+    gap: 24px;
+  }
+  .about-page [aria-labelledby="about-order-title"] > div > div:first-child {
+    width: 100%;
+  }
+  .about-page [aria-labelledby="about-order-title"] p {
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 28px;
+  }
+
+  .gallery-page > div:first-of-type {
+    margin-top: 12px;
+    gap: 14px;
+  }
+  .gallery-page > div:first-of-type > p {
+    font-size: 17px;
+    line-height: 28px;
+    font-weight: 400;
+  }
+  .gallery-page > nav[aria-label="Поводы"] {
+    margin-top: 20px;
+  }
+  .gallery-page > nav[aria-label="Поводы"] + div {
+    margin-top: 24px;
+  }
+  .gallery-page [data-reveal="group"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 33px 8px;
+  }
+  .gallery-page article,
+  .cakes-page [aria-labelledby="designs-title"] article {
+    --picture-ratio: 175 / 219;
+  }
+  .gallery-page article > p:first-of-type {
+    margin-top: 12px;
+  }
+  .gallery-page article h3 {
+    display: block;
+    margin-top: 8px;
+    font-size: 21px;
+    line-height: 27px;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+  }
+  .gallery-page article h3 + p {
+    margin-top: 6px;
+  }
+  .gallery-page article > a:last-child {
+    margin-top: 12px;
+  }
+  .gallery-page {
+    padding-top: 10px;
+    padding-bottom: 64px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] {
+    margin-top: 64px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] > div {
+    padding-top: 16px;
+    padding-bottom: 24px;
+    gap: 24px;
+  }
+  .gallery-page [aria-labelledby="works-cta-title"] p {
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 28px;
+  }
+  .gallery-page > nav[aria-label="Поводы"] + div > div:last-child > a {
+    width: 100%;
+  }
+  .gallery-page > nav[aria-label="Поводы"] + div > div:last-child:not([data-reveal]) {
+    margin-top: 40px;
+  }
+  .gallery-page .text-caps {
+    font-size: 11px;
+    line-height: 16px;
+  }
+  .gallery-page .text-meta {
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .cakes-page > div:first-of-type {
+    margin-top: 20px;
+    gap: 28px;
+  }
+  .cakes-page > div:first-of-type > div > p {
+    font-size: 16px;
+    line-height: 26px;
+    font-weight: 300;
+  }
+  .cakes-page > div:first-of-type > div > div {
+    margin-top: 22px;
+    flex-direction: column;
+  }
+  .cakes-page > div:first-of-type > div > div > a {
+    width: 100%;
+    height: 52px;
+  }
+  .cakes-page > div:first-of-type > dl > div {
+    padding-block: 16px;
+    padding-left: 12px;
+    justify-content: flex-end;
+  }
+  .cakes-page > div:first-of-type > dl {
+    min-height: 110px;
+  }
+  .cakes-page > div:first-of-type > dl > div:first-child {
+    padding-left: 0;
+  }
+  .cakes-page > div:first-of-type > dl dd {
+    font-size: 20px;
+    line-height: 26px;
+    white-space: nowrap;
+  }
+  .cakes-page > div:first-of-type > dl dt {
+    font-size: 12px;
+  }
+  .cakes-page > div:first-of-type > dl > div:nth-child(2) dt {
+    max-width: 90px;
+  }
+  .cakes-page > nav[aria-label="Поводы"] {
+    margin-top: 58px;
+  }
+  .cakes-page [aria-labelledby="designs-title"] {
+    margin-top: 24px;
+  }
+  .cakes-page [aria-labelledby="designs-title"] > ul,
+  .design-page [aria-labelledby="others-title"] > ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 8px;
+  }
+  .cakes-page [aria-labelledby="designs-title"] > ul > li:first-child {
+    grid-column: 1 / -1;
+    margin-bottom: 4px;
+  }
+  html.js .cakes-page [data-design-grid][data-expanded="false"] > li:nth-child(n + 10) {
+    display: none;
+  }
+  .cakes-page [aria-labelledby="designs-title"] > ul > li:first-child article {
+    min-height: 232px;
+    padding: 20px;
+  }
+  .cakes-page [aria-labelledby="designs-title"] article h3 {
+    font-size: 22px;
+    line-height: 28px;
+  }
+  .cakes-page [aria-labelledby="designs-title"] > ul > li:first-child h3 {
+    font-size: 26px;
+    line-height: 32px;
+  }
+  .cakes-page [aria-labelledby="designs-title"] > ul > li:first-child a {
+    width: 100%;
+    height: 48px;
+    justify-content: center;
+  }
+  .public-site article.group\/design > p:first-of-type {
+    margin-top: 10px;
+    font-size: 11px;
+    line-height: 14px;
+  }
+  .public-site article.group\/design h3 {
+    margin-top: 2px;
+    font-size: 20px;
+    line-height: 24px;
+  }
+  .public-site article.group\/design h3 + p {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .public-site article.group\/design > div:last-child {
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 10px;
+    gap: 12px;
+  }
+  .public-site article.group\/design > div:last-child > p {
+    font-size: 16px;
+  }
+  .public-site article.group\/design > div:last-child > a {
+    width: 100%;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] > ul,
+  .cakes-page [aria-labelledby="fillings-title"] ul[aria-label="Остальные начинки"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 21px 8px;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] article h3 {
+    margin-top: 12px;
+    font-size: 18px;
+    line-height: 22px;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] article h3 + p {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] article > ul {
+    margin-top: 8px;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] article > ul span {
+    height: 28px;
+    padding: 6px 12px;
+    font-size: 11px;
+    line-height: 14px;
+    letter-spacing: 0.1em;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] h2 + p,
+  .cakes-page [aria-labelledby="prices-title"] h2 + p {
+    font-size: 16px;
+    line-height: 26px;
+  }
+  html.js
+    .cakes-page
+    [data-mobile-fillings-limit="6"][data-fillings-expanded="false"]
+    > li:nth-child(7) {
+    display: none;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] li:has(> [aria-labelledby="tasting-set-title"]) {
+    grid-column: 1 / -1;
+  }
+  .cakes-page [aria-labelledby="tasting-set-title"] {
+    min-height: 230px;
+    padding: 28px;
+  }
+  .cakes-page #tasting-set-title {
+    font-size: 28px;
+    line-height: 34px;
+  }
+  .cakes-page [aria-labelledby="tasting-set-title"] > p:first-of-type {
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .cakes-page [aria-labelledby="tasting-set-title"] > p:nth-of-type(2) {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  .cakes-page [aria-labelledby="tasting-set-title"] > :is(a, button) {
+    padding-inline: 24px;
+    font-size: 14px;
+  }
+  .cakes-page [aria-labelledby="fillings-title"] > div:last-child > button {
+    width: 100%;
+  }
+  .cakes-page [aria-labelledby="calculator-title"] > div {
+    padding: 24px 20px;
+    gap: 28px;
+  }
+  .cakes-page [aria-labelledby="calculator-title"] {
+    margin-top: 72px;
+  }
+  .cakes-page [aria-labelledby="calculator-title"] dl > div {
+    padding-block: 17px;
+  }
+  .cakes-page [aria-labelledby="calculator-title"] dd {
+    line-height: 26px;
+  }
+  .cakes-page [aria-labelledby="prices-title"],
+  .cakes-page [aria-labelledby="fillings-title"] {
+    margin-top: 64px;
+  }
+  .cakes-page [aria-labelledby="prices-title"] > ul {
+    margin-top: 36px;
+  }
+  .cakes-page [aria-labelledby="prices-title"] > ul > li {
+    padding-block: 22px;
+  }
+  .cakes-page [aria-labelledby="prices-title"] > ul > li > p:nth-child(2) {
+    line-height: 36px;
+  }
+  .cakes-page [aria-labelledby="prices-title"] > ul > li > p:last-child {
+    margin-top: 8px;
+  }
+  .cakes-page #calculator-title {
+    font-size: 32px;
+    line-height: 36px;
+  }
+  .cakes-page #calculator-title + p {
+    margin-top: 12px;
+    font-size: 16px;
+  }
+  .cakes-page [aria-labelledby="order-title"] ol {
+    gap: 0;
+  }
+  .cakes-page [aria-labelledby="order-title"] {
+    margin-top: 64px;
+  }
+  .cakes-page [aria-labelledby="order-title"] ol > li {
+    position: relative;
+    min-height: 164px;
+    padding-left: 64px;
+    padding-bottom: 28px;
+  }
+  .cakes-page [aria-labelledby="order-title"] ol > li::before {
+    content: "";
+    position: absolute;
+    left: 23px;
+    top: 44px;
+    bottom: 12px;
+    width: 1px;
+    background: var(--color-line);
+  }
+  .cakes-page [aria-labelledby="order-title"] ol > li:last-child::before {
+    display: none;
+  }
+  .cakes-page [aria-labelledby="order-title"] ol > li > p:first-child {
+    position: absolute;
+    left: 14px;
+    top: 5px;
+  }
+  .cakes-page [aria-labelledby="order-title"] ol h3 {
+    margin-top: 0;
+    font-size: 26px;
+  }
+  .cakes-page [aria-labelledby="order-title"] dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 32px;
+  }
+  .cakes-page [aria-labelledby="order-title"] dl > div {
+    padding: 20px 16px;
+  }
+  .cakes-page [aria-labelledby="order-title"] dl > div:nth-child(-n + 2) {
+    border-top: 0;
+  }
+  .cakes-page [aria-labelledby="order-title"] dl > div:nth-child(even) {
+    border-left: 1px solid var(--color-line);
+  }
+  .cakes-page [aria-labelledby="order-title"] dl dd {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  html.js
+    .cakes-page
+    [aria-labelledby="faq-title"]
+    h3
+    button[aria-expanded="false"]
+    > span:first-child {
+    display: block;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .product-page > div:first-of-type,
+  .design-page > div:first-of-type {
+    margin-top: 8px;
+    gap: 16px;
+  }
+  .product-related ul {
+    gap: 12px;
+  }
+  .product-related {
+    padding-top: 72px;
+  }
+  .product-related h2 {
+    font-size: 44px;
+    line-height: 50px;
+  }
+  .product-related h2 + p {
+    margin-top: 12px;
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 400;
+  }
+  .product-related [aria-roledescription] > div:first-child > div:first-child {
+    width: 100%;
+  }
+  .product-related [aria-roledescription] > div:first-child > div:last-child {
+    width: 100%;
+    gap: 12px;
+  }
+  .product-related [aria-roledescription] > div:first-child > div:last-child > div {
+    display: flex;
+    order: 2;
+    flex-shrink: 0;
+  }
+  .product-related [aria-roledescription] > div:first-child > div:last-child > a {
+    flex: 1;
+    order: 1;
+  }
+  .product-related [aria-roledescription] > div:first-child button:disabled {
+    border-color: var(--color-line);
+    color: var(--color-ink-muted);
+  }
+  .product-summary > p:first-of-type {
+    margin-top: 0;
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .product-summary > hr {
+    margin-top: 12px;
+  }
+  .product-summary .product-delivery {
+    margin-top: 24px;
+  }
+  .product-page .product-details {
+    margin-top: 64px;
+  }
+  .product-details h2 > button {
+    min-height: 80px;
+    align-items: center;
+    padding-block: 12px;
+  }
+  .product-details h2 > button > span:first-child {
+    max-width: calc(100% - 60px);
+    font-size: 24px;
+    line-height: 29px;
+  }
+  .product-details h2 > button > svg {
+    margin-right: 12px;
+  }
+  .product-details > div > div:first-child h2 > button {
+    min-height: 76px;
+    align-items: flex-start;
+    padding-top: 28px;
+    padding-bottom: 19px;
+  }
+  .product-details > div > div:not(:first-child) h2 > button > svg {
+    margin-top: 0;
+  }
+  .product-page [aria-labelledby="custom-cake-promo"] {
+    margin-top: 48px;
+    gap: 12px;
+    padding: 24px 20px;
+    background: var(--color-accent);
+  }
+  .product-page #custom-cake-promo {
+    font-size: 26px;
+    line-height: 32px;
+  }
+  .product-page [aria-labelledby="custom-cake-promo"] > p {
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 300;
+    color: color-mix(in srgb, var(--color-on-accent) 70%, transparent);
+  }
+  .product-page [aria-labelledby="custom-cake-promo"] > a {
+    height: 48px;
+    min-height: 48px;
+    margin-top: 16px;
+    border-color: var(--color-on-accent);
+    background: var(--color-on-accent);
+    color: var(--color-accent);
+  }
+  .product-details #nutrition-caption {
+    margin-top: 16px;
+    line-height: 20px;
+  }
+  .product-details dl:not([aria-labelledby]) {
+    border-top: 0;
+  }
+  .product-details dl:not([aria-labelledby]) > div {
+    gap: 2px;
+    font-size: 15px;
+    line-height: 22px;
+  }
+  .product-details dl:not([aria-labelledby]) > div:first-child {
+    padding-top: 16px;
+  }
+  .product-details dl:not([aria-labelledby]) > div:last-child {
+    border-bottom: 0;
+  }
+  .product-details dl:not([aria-labelledby]) dt {
+    font-size: 13px;
+    line-height: 16px;
+  }
+  .product-related article h3 {
+    font-size: 18px;
+    line-height: 22px;
+  }
+  .legal-page h1 {
+    margin-top: 16px;
+  }
+  .cart-page form {
+    margin-top: 16px;
+  }
+  .legal-page h2 {
+    font-size: 26px;
+    line-height: 32px;
+  }
+}

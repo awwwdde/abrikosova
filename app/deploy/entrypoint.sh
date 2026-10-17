@@ -36,6 +36,11 @@ export CORS_ORIGINS="${CORS_ORIGINS:-[\"$SITE_URL\"]}"
 export JWT_SECRET="${JWT_SECRET:-${SECRET_KEY:-}}"
 export REVALIDATE_SECRET="${REVALIDATE_SECRET:-${SECRET_KEY:-$JWT_SECRET}}"
 
+# Пресет владельца в панели платформы использует BOOTSTRAP_ADMIN_*.
+# Явно заданные переменные сайта сохраняют приоритет.
+export ADMIN_SEED_EMAIL="${ADMIN_SEED_EMAIL:-${BOOTSTRAP_ADMIN_EMAIL:-}}"
+export ADMIN_SEED_PASSWORD="${ADMIN_SEED_PASSWORD:-${BOOTSTRAP_ADMIN_PASSWORD:-}}"
+
 # Внутренние адреса — постоянные
 export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379/0}"
 # nginx — локальный peer API. Сети внешнего балансировщика задаются явно в панели.

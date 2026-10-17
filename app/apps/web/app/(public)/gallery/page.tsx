@@ -100,7 +100,7 @@ export default async function GalleryPage({ searchParams }: { searchParams: Sear
   const cta = content?.content.cta;
 
   return (
-    <div className="container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[128px]">
+    <div className="gallery-page public-page container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[128px]">
       <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: "Работы" }]} />
 
       <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start xl:mt-[25px]">

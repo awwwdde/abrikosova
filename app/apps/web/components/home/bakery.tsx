@@ -37,7 +37,7 @@ export function Bakery({ contacts }: { contacts: ContactsPage }) {
   return (
     <section aria-labelledby="bakery-title" className="py-20 lg:pt-[257px] lg:pb-[127px]">
       <div className="container-page">
-        <RevealText as="h2" id="bakery-title" className="text-section">
+        <RevealText as="h2" id="bakery-title" className="text-section" preserveSpaces>
           Кондитерская на Гжатской
         </RevealText>
         <Reveal as="p" className="mt-2 text-subtitle font-light text-ink-muted lg:mt-[8.6px]">

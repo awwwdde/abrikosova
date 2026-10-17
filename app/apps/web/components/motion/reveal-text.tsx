@@ -68,6 +68,7 @@ export function RevealText({
   className = "",
   delay = 0,
   id,
+  preserveSpaces = false,
 }: {
   as?: ElementType;
   /** Только строка: разбиваем текст, а не разметку */
@@ -76,10 +77,12 @@ export function RevealText({
   /** Задержка старта, с */
   delay?: number;
   id?: string;
+  /** Для заголовков, где макет допускает перенос после короткого предлога. */
+  preserveSpaces?: boolean;
 }) {
   // Типографика до разбиения: неразрывные пробелы после коротких слов держат их
   // в одной строке со следующим словом, и замер строк это учитывает
-  const text = typograf(raw);
+  const text = preserveSpaces ? raw : typograf(raw);
   const ref = useRef<HTMLElement>(null);
   const [lines, setLines] = useState<string[] | null>(null);
 

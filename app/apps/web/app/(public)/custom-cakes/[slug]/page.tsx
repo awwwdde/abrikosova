@@ -90,7 +90,7 @@ export default async function DesignPage({ params }: { params: Params }) {
   return (
     <>
       <JsonLd data={[designJsonLd(design), breadcrumbJsonLd(crumbs)]} />
-      <div className="container-page pt-8 pb-20 xl:pt-[41px] xl:pb-[128px]">
+      <div className="design-page public-page container-page pt-8 pb-20 xl:pt-[41px] xl:pb-[128px]">
         <Breadcrumbs items={crumbs} />
 
         <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-12 xl:mt-[31px] xl:grid-cols-[688px_minmax(0,672px)] xl:gap-14">

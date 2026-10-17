@@ -50,7 +50,7 @@ export function CtaBanner({
           {text}
         </Reveal>
       </div>
-      <Reveal delay={MOTION.button.delay} className={`shrink-0 ${buttonClassName}`}>
+      <Reveal delay={MOTION.button.delay} className={`shrink-0 max-sm:w-full ${buttonClassName}`}>
         <LinkButton href={href} variant={buttonVariant} size={buttonSize} className="w-full">
           {label}
         </LinkButton>

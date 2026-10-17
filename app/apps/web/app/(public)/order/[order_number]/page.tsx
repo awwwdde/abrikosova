@@ -93,7 +93,7 @@ export default async function OrderPage({
   const delivery = order.delivery_method === "delivery";
 
   return (
-    <div className="container-page pt-8 pb-20 xl:pt-[41px] xl:pb-[160px]">
+    <div className="order-page public-page container-page pt-8 pb-20 xl:pt-[41px] xl:pb-[160px]">
       <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: "Заказ принят" }]} />
       <p className="mt-6 text-[14px] leading-5 text-ink-subtle xl:mt-[27px]">
         Заказ № {order.order_number}

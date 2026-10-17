@@ -104,8 +104,8 @@ export default async function ProductPage({ params, searchParams }: Props) {
       ? "бесплатно"
       : `от ${formatPrice(price)}, бесплатно от ${formatPrice(freeFrom)}`;
   const labels = [
-    ...product.tags.map((tag) => TAG_LABELS[tag]),
-    ...product.dietary.map((tag) => DIETARY_LABELS[tag]),
+    ...product.tags.map((tag) => ({ text: TAG_LABELS[tag], dietary: false })),
+    ...product.dietary.map((tag) => ({ text: DIETARY_LABELS[tag], dietary: true })),
   ];
   const content = contacts?.content;
   const telegramUrl = contacts?.telegram_url ?? null;
@@ -146,7 +146,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
     <>
       <JsonLd data={productJsonLd(product)} />
 
-      <div className="container-page pt-8 xl:pt-[41px]">
+      <div className="product-page public-page container-page pt-8 xl:pt-[41px]">
         <Breadcrumbs
           items={[
             { href: "/", label: "Главная" },
@@ -166,7 +166,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             }))}
           />
 
-          <div>
+          <div className="product-summary">
             <h1 className="-mt-1 font-display text-section leading-[48px] text-ink">
               {typograf(product.name)}
             </h1>
@@ -174,10 +174,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 маркетинговые («Новинка», «Хит») и состав («Без глютена»), всё, что
                 отмечено в карточке товара в админке */}
             {labels.length > 0 ? (
-              <ul aria-label="Метки" className="mt-[14px] mb-[14px] flex flex-wrap gap-2">
+              <ul
+                aria-label="Метки"
+                className={`mt-[14px] mb-[14px] flex flex-wrap gap-2 ${product.dietary.length === 0 ? "max-xl:hidden" : ""}`}
+              >
                 {labels.map((label) => (
-                  <li key={label}>
-                    <Tag>{typograf(label)}</Tag>
+                  <li key={label.text} className={label.dietary ? undefined : "max-xl:hidden"}>
+                    <Tag>{typograf(label.text)}</Tag>
                   </li>
                 ))}
               </ul>
@@ -211,7 +214,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
               showWeight={showWeight}
             >
               {content?.product_pickup || content?.product_delivery ? (
-                <dl className="mt-[32px] border-t border-line text-sm">
+                <dl className="product-delivery mt-[32px] border-t border-line text-sm">
                   {content.product_pickup ? (
                     <div className="flex justify-between gap-6 border-b border-line pt-[14px] pb-[13px] leading-6">
                       <dt className="text-ink-subtle">Самовывоз</dt>
@@ -262,7 +265,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        <div className="mt-20 xl:mt-[120px]">
+        <div className="product-details mt-20 xl:mt-[120px]">
           <ProductDetails blocks={blocks} />
         </div>
 
@@ -278,7 +281,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             {typograf("Нужен торт другого веса или под повод?")}
           </h2>
           <p className="text-[15px] leading-[26px] text-canvas">
-            {typograf("Соберём торт под число гостей: начинка на выбор, оформление по эскизу")}
+            Соберём торт под число гостей: начинка на выбор, оформление по эскизу
           </p>
           <LinkButton
             href="/custom-cakes"
@@ -292,13 +295,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
       </div>
 
       {showcase.length > 0 ? (
-        <div className="container-page py-20 lg:pt-[117px] lg:pb-32">
+        <div className="product-related container-page py-20 lg:pt-[117px] lg:pb-32">
           <Carousel
             title="Ещё на витрине сегодня"
             subtitle="Можно добавить к заказу и забрать вместе"
             subtitleGap="-mt-[5.4px]"
             headerGap="md:mb-[47px]"
-            itemClassName="w-[78vw] sm:w-[336px]"
+            itemClassName="w-[calc((100vw-40px)/2)] sm:w-[336px]"
             action={
               <LinkButton href="/catalog?availability=today" variant="outline" size="md">
                 Вся витрина

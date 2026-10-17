@@ -116,7 +116,7 @@ export async function CatalogView({
   const note = contacts?.content.catalog_note;
 
   return (
-    <div className="container-page pb-20 xl:pb-[127px]">
+    <div className="catalog-page public-page container-page pb-20 xl:pb-[127px]">
       <div className="flex flex-col gap-6 pt-8 md:flex-row md:items-start md:justify-between xl:pt-[41px]">
         <div>
           <Breadcrumbs items={crumbs} />

@@ -43,9 +43,22 @@ function NutritionTable({ nutrition }: { nutrition: Nutrition }) {
       <p id="nutrition-caption" className="mt-[33px] text-[13px] text-ink-subtle">
         Пищевая ценность на 100 г
       </p>
+      <dl aria-labelledby="nutrition-caption" className="mt-3 grid grid-cols-4 gap-2 sm:hidden">
+        {rows
+          .filter(([, value]) => value)
+          .map(([label, value]) => (
+            <div
+              key={label}
+              className="flex flex-col-reverse rounded-[14px] bg-white px-2 py-3 text-center"
+            >
+              <dt className="mt-1 text-xs leading-4 text-ink-muted">{label}</dt>
+              <dd className="text-sm leading-5 font-semibold text-ink">{value}</dd>
+            </div>
+          ))}
+      </dl>
       <table
         aria-labelledby="nutrition-caption"
-        className="mt-[12px] w-full border-collapse border border-line text-center text-sm text-ink"
+        className="mt-[12px] hidden w-full border-collapse border border-line text-center text-sm text-ink sm:table"
       >
         <thead>
           <tr className="bg-photo">

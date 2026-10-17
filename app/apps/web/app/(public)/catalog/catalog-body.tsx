@@ -188,7 +188,7 @@ export function CatalogBody({
     <>
       <div className="mt-[53px] flex flex-col gap-5 max-xl:mt-8 xl:flex-row xl:flex-wrap xl:items-end xl:justify-between">
         <Tabs categories={categories} active={categorySlug} search={keep} />
-        <div className="flex items-center justify-between gap-6 max-sm:flex-wrap xl:pt-0">
+        <div className="flex items-center justify-between gap-6 max-sm:grid max-sm:grid-cols-2 max-sm:gap-2 xl:pt-0">
           <FilterPanel
             buttonRef={filtersButton}
             location={{ category: categorySlug, subcategory: subcategorySlug }}
@@ -205,6 +205,7 @@ export function CatalogBody({
 
       <div
         aria-busy={pending || undefined}
+        data-catalog-results
         className={`${category ? "mt-10" : "mt-[41px]"} transition-opacity duration-200 ${pending ? "opacity-50" : ""}`}
       >
         {/* Заголовок списка для скринридеров и порядка заголовков: после H1

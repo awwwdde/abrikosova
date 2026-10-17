@@ -45,7 +45,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
   };
   return (
     <LenisProvider>
-      <div className="flex min-h-screen flex-col">
+      <div className="public-site flex min-h-screen flex-col">
         <Header phone={contacts?.phone ?? null} menu={menu} />
         <main className="flex-1">{children}</main>
         <SiteFooter contacts={contacts} categories={categories} />

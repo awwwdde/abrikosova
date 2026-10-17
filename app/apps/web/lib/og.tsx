@@ -23,7 +23,7 @@ export const OG_SIZE = { width: 1200, height: 630 };
 
 const ROOT = process.cwd();
 const FONT_DIR = path.join(ROOT, "assets", "og-fonts");
-const HERO_POSTER = path.join(ROOT, "public", "media", "hero", "poster.jpg");
+const HERO_POSTER = path.join(ROOT, "public", "media", "hero", "poster-main.jpg");
 const LOGO = path.join(ROOT, "public", "brand", "logo.png");
 
 export const COLORS = { cream: "#FBF7F0", ink: "#1A1210", muted: "#5A524F", accent: "#842124" };

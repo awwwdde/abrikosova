@@ -70,7 +70,7 @@ export default async function ContactsPage() {
   ].filter((card): card is { title: string; text: string } => Boolean(card.text));
 
   return (
-    <div className="container-page pt-[36px] pb-[128px] max-lg:pt-7 max-lg:pb-[72px]">
+    <div className="contacts-page public-page container-page pt-[36px] pb-[128px] max-lg:pt-7 max-lg:pb-[72px]">
       <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: "Контакты" }]} />
       <div className="mt-2 mb-10 grid grid-cols-2 items-end gap-6 max-lg:items-start max-md:mt-4 max-md:mb-7 max-md:grid-cols-1 max-md:gap-4">
         <RevealText as="h1" className={H2}>

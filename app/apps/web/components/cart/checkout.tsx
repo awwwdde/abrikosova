@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Controller, useForm, useWatch, type FieldErrors } from "react-hook-form";
 import { useCart } from "@/components/cart-context";
+import { FloatingActionBar } from "@/components/floating-action-bar";
 import { Check, RadioGroup, RadioPills, TextField } from "@/components/form-fields";
 import { useLenis } from "@/components/lenis-provider";
 import { ApiError, apiFetch, type Cart, type OrderCreated } from "@/lib/api";
@@ -629,7 +630,7 @@ export function Checkout({
       </aside>
 
       {/* Ниже 1024: «Ваш заказ» под формой, а итог и кнопка — липкой полосой внизу */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t border-line bg-canvas px-4 py-3 lg:hidden">
+      <FloatingActionBar className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t border-line bg-canvas px-4 py-3 lg:hidden">
         <p className="text-[15px] text-ink">
           Итого <b className="tabular-nums">{money(total)}</b>
         </p>
@@ -640,7 +641,7 @@ export function Checkout({
         >
           {submitting ? "Отправляем…" : "Отправить заказ"}
         </button>
-      </div>
+      </FloatingActionBar>
     </form>
   );
 }

@@ -105,7 +105,7 @@ export default async function AboutPage() {
   const banner = home?.content.order_banner;
 
   return (
-    <div className="pt-[36px] max-md:pt-7">
+    <div className="about-page public-page pt-[36px] max-md:pt-7">
       <div className="container-page">
         <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: "О нас" }]} />
         <section
@@ -127,7 +127,7 @@ export default async function AboutPage() {
             <RevealText
               as="h1"
               id="about-title"
-              className="text-[58px] leading-[64px] max-xl:text-[44px] max-xl:leading-[48px] max-md:text-4xl max-md:leading-[42px]"
+              className="text-[58px] leading-[64px] max-md:text-4xl max-md:leading-[42px]"
             >
               {name}
             </RevealText>
@@ -150,7 +150,7 @@ export default async function AboutPage() {
             {biography.length > 0 ? (
               <Reveal className="mt-[31px] max-w-[696px] space-y-[3px] text-lg leading-[30px] text-ink-muted max-xl:mt-6 max-xl:text-base max-xl:leading-[26px]">
                 {biography.map((text, i) => (
-                  <p key={i}>{typograf(text)}</p>
+                  <p key={i}>{text}</p>
                 ))}
               </Reveal>
             ) : null}

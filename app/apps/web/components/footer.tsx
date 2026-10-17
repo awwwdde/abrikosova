@@ -1,6 +1,5 @@
 /**
- * Подвал по макету 1512.png. Цвет — тёмный бордо `accent-pressed` (#6E1B1E) на всех
- * публичных страницах, включая главную (решение 09.10, макеты new/design/pages/).
+ * Общий подвал по макетам главной: accent на всех ширинах.
  *
  * Слева логотип и «Кондитер, автор рецептур»; колонки «Разделы» (то же меню,
  * что в шапке), «Торты» (подкатегории группы «Торты» из GET /catalog/categories)
@@ -33,9 +32,17 @@ const LEGAL_LINKS = [
   { href: "/consent", label: "Согласие на обработку персональных данных" },
 ];
 
-function Column({ title, children }: { title: string; children: ReactNode }) {
+function Column({
+  title,
+  children,
+  className = "",
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
+    <div className={className}>
       <h2 className="mt-[3px] font-sans text-xs leading-none tracking-[0.1em] text-on-accent/50 uppercase">
         {typograf(title)}
       </h2>
@@ -74,11 +81,14 @@ export function SiteFooter({
   const legal = content?.legal;
 
   return (
-    <footer className="mt-auto bg-accent-pressed text-on-accent">
+    <footer className="mt-auto bg-accent text-on-accent max-sm:[&_a]:font-light max-sm:[&_p]:font-light">
       {/* Верх и правовые строки связаны: один триггер и одна анимация на весь контент. */}
-      <Reveal delay={0} className="container-page pt-16 pb-10 lg:pt-24 lg:pb-[56px]">
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[384fr_324fr_324fr_384fr] lg:gap-0">
-          <div>
+      <Reveal
+        delay={0}
+        className="container-page pt-16 pb-10 max-sm:pt-14 max-sm:pb-9 lg:pt-24 lg:pb-[56px]"
+      >
+        <div className="grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-12 lg:grid-cols-[384fr_324fr_324fr_384fr] lg:gap-0">
+          <div className="col-span-2 sm:col-span-1">
             <Link href="/" aria-label="Главная" className="inline-block text-canvas">
               <Logo fit="fill" className="h-[41px] w-[159px]" />
             </Link>
@@ -105,10 +115,10 @@ export function SiteFooter({
           )}
 
           {contacts ? (
-            <Column title="Кондитерская">
+            <Column title="Кондитерская" className="col-span-2 sm:col-span-1">
               <address className="not-italic">
                 {contacts.address ? (
-                  <p className="mt-px font-display text-[1.5rem] leading-[1.3]">
+                  <p className="mt-px font-display text-[20px] leading-[26px] sm:text-[1.5rem] sm:leading-[1.3]">
                     {typograf(contacts.address)}
                   </p>
                 ) : null}
@@ -120,7 +130,7 @@ export function SiteFooter({
                 {tel ? (
                   <a
                     href={tel.href}
-                    className="tnum mt-[27px] inline-block font-display text-[1.5rem] leading-[1.3] transition-colors hover:text-white"
+                    className="tnum mt-[27px] inline-block font-display text-xl leading-[1.3] transition-colors hover:text-white max-sm:mt-[30px] max-sm:font-sans max-sm:text-base max-sm:leading-6 sm:text-[1.5rem]"
                   >
                     {tel.display}
                   </a>
@@ -146,10 +156,12 @@ export function SiteFooter({
           ) : null}
         </div>
 
-        <div className="mt-14 flex flex-col gap-6 border-t border-on-accent/20 pt-8 text-[13px] leading-5 text-on-accent/50 lg:mt-[72px] lg:flex-row lg:justify-between">
-          <div className="space-y-[11px]">
-            <p>{typograf(`© ${new Date().getFullYear()} Кондитерская Елены Абрикосовой`)}</p>
-            <ul className="flex flex-wrap gap-x-6 gap-y-[11px]">
+        <div className="mt-14 grid gap-3 border-t border-on-accent/20 pt-8 text-[13px] leading-5 text-on-accent/50 max-sm:mt-[45px] max-sm:gap-1.5 sm:flex sm:flex-col sm:gap-6 lg:mt-[72px] lg:flex-row lg:justify-between">
+          <div className="contents sm:block sm:space-y-[11px]">
+            <p className="order-1 sm:order-none">
+              {typograf(`© ${new Date().getFullYear()} Кондитерская Елены Абрикосовой`)}
+            </p>
+            <ul className="order-3 flex flex-col flex-wrap gap-x-6 gap-y-[11px] max-sm:mt-1.5 max-sm:gap-y-2 sm:order-none sm:flex-row">
               {LEGAL_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
@@ -161,13 +173,17 @@ export function SiteFooter({
                 </li>
               ))}
             </ul>
-            <p>
+            <p className="order-4 max-sm:mt-1.5 sm:order-none">
               {typograf(
                 "Сайт носит информационный характер и не является публичной офертой по ст. 437 ГК РФ",
               )}
             </p>
           </div>
-          {legal ? <p>{typograf(`${legal.name}, ОГРНИП ${legal.ogrnip}`)}</p> : null}
+          {legal ? (
+            <p className="order-2 sm:order-none">
+              {typograf(`${legal.name}, ОГРНИП ${legal.ogrnip}`)}
+            </p>
+          ) : null}
         </div>
       </Reveal>
     </footer>

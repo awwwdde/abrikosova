@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./home-responsive.css";
+@import "./public-responsive.css";
 
 /*
   Дизайн-токены проекта — по макетам new/design/components.png и home-1512.png.
@@ -410,7 +411,7 @@
   .js:not(.reveal-instant) [data-reveal="fade"][data-pending]:not([data-shown]),
   .js:not(.reveal-instant) [data-reveal="group"][data-pending]:not([data-shown]) > * {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(10px);
   }
 
   .js:not(.reveal-instant) [data-reveal="text"][data-pending]:not([data-shown]) .reveal-line {
@@ -424,7 +425,7 @@
   .js:not(.reveal-instant)
     [data-reveal="image"][data-pending]:not([data-shown])
     [data-reveal-zoom] {
-    transform: scale(1.08);
+    transform: scale(1.035);
   }
 
   .js:not(.reveal-instant) [data-reveal="line"][data-pending]:not([data-shown]) {
@@ -437,13 +438,13 @@
      всё время, поэтому анимация безопасна в любой момент. Подзаголовок и кнопка —
      сдвигом на 16px */
   [data-hero-anim] .hero-line {
-    animation: reveal-line-short 0.9s var(--ease-out-soft) both;
-    animation-delay: calc(0.05s + var(--i, 0) * 0.08s);
+    animation: reveal-line-short 0.55s var(--ease-out-soft) both;
+    animation-delay: calc(var(--i, 0) * 0.045s);
   }
 
   [data-hero-anim] .hero-fade {
-    animation: reveal-shift 0.7s var(--ease-out-soft) both;
-    animation-delay: var(--delay, 0.35s);
+    animation: reveal-shift 0.4s var(--ease-out-soft) both;
+    animation-delay: var(--delay, 0.08s);
   }
 
   /* Возврат по истории: герой уже был показан — не проигрываем заново */
@@ -486,7 +487,7 @@
 
 @keyframes reveal-shift {
   from {
-    transform: translateY(16px);
+    transform: translateY(10px);
   }
 }
 

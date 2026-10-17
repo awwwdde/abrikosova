@@ -94,7 +94,7 @@ export function PhotoGallery({
   }
 
   return (
-    <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+    <div className="flex flex-col gap-4 max-sm:gap-0 xl:flex-row xl:items-start">
       {/* Большое фото. Ниже 640 — лента со свайпом, выше — одно выбранное фото */}
       <div
         ref={track}
@@ -165,7 +165,7 @@ export function PhotoGallery({
         <div
           role="group"
           aria-label={groupLabel}
-          className="flex gap-3 xl:w-24 xl:shrink-0 xl:flex-col"
+          className="flex gap-3 max-sm:h-6 max-sm:justify-center max-sm:gap-0 xl:w-24 xl:shrink-0 xl:flex-col"
         >
           {photos.map((photo, index) => {
             const src = imageUrl(photo?.storageKey);
@@ -182,23 +182,29 @@ export function PhotoGallery({
                   aria-label={`Показать фото: ${role ?? `${index + 1} из ${photos.length}`}`}
                   onClick={() => show(index)}
                   onKeyDown={(event) => onKeyDown(event, index)}
-                  className={`relative aspect-[4/5] w-24 border bg-photo transition-colors duration-150 max-sm:w-16 ${
+                  className={`relative aspect-[4/5] w-24 border bg-photo transition-colors duration-150 max-sm:aspect-auto max-sm:h-6 max-sm:w-6 max-sm:border-0 max-sm:bg-transparent ${
                     selected ? "border-ink" : "border-transparent hover:border-line-strong"
                   }`}
                 >
-                  {src ? (
-                    <Image
-                      src={src}
-                      alt=""
-                      fill
-                      sizes="96px"
-                      loading="lazy"
-                      className="object-cover"
-                    />
-                  ) : role ? (
-                    // Без фото подпись роли — на плашке, как на макете
-                    <Placeholder text={role} small />
-                  ) : null}
+                  <span
+                    className={`absolute top-1/2 left-1/2 hidden h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full max-sm:block ${selected ? "w-[18px] bg-accent" : "w-1.5 bg-line"}`}
+                    aria-hidden="true"
+                  />
+                  <span className="absolute inset-0 max-sm:hidden">
+                    {src ? (
+                      <Image
+                        src={src}
+                        alt=""
+                        fill
+                        sizes="96px"
+                        loading="lazy"
+                        className="object-cover"
+                      />
+                    ) : role ? (
+                      // Без фото подпись роли — на плашке, как на макете
+                      <Placeholder text={role} small />
+                    ) : null}
+                  </span>
                 </button>
               </div>
             );

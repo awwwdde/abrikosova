@@ -60,9 +60,7 @@ export function FillingCard({
       <h3 className="mt-[14px] font-display text-[22px] leading-[30px] text-ink">
         {typograf(filling.name)}
       </h3>
-      <p className="mt-[7px] text-[14px] leading-5 text-ink-muted">
-        {typograf(filling.short_description)}
-      </p>
+      <p className="mt-[7px] text-[14px] leading-5 text-ink-muted">{filling.short_description}</p>
       {filling.dietary_labels.length > 0 ? (
         <ul className="mt-[9px] flex flex-wrap gap-2">
           {filling.dietary_labels.map((label) => (

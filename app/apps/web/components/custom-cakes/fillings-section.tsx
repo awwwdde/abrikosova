@@ -52,9 +52,7 @@ function TastingSetCard({ set }: { set: TastingSet }) {
       <h3 id="tasting-set-title" className="font-display text-[26px] leading-8">
         {typograf(set.name)}
       </h3>
-      <p className="mt-[14px] text-[14px] leading-[22px] text-canvas/75">
-        {typograf(set.description)}
-      </p>
+      <p className="mt-[14px] text-[14px] leading-[22px] text-canvas/75">{set.description}</p>
       <p className="mt-auto text-[18px] leading-6 font-medium tabular-nums">
         {formatPrice(set.price)}
       </p>
@@ -104,20 +102,37 @@ export function FillingsSection({
   const [open, setOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const firstNew = useRef<HTMLLIElement>(null);
+  const firstMobileNew = useRef<HTMLLIElement>(null);
 
   useEffect(() => setHydrated(true), []);
 
   function expand() {
     setOpen(true);
     // Фокус — после того, как строка раскрылась и стала доступной
-    window.requestAnimationFrame(() => firstNew.current?.focus({ preventScroll: true }));
+    window.requestAnimationFrame(() => {
+      const target =
+        tastingSet && window.matchMedia("(max-width: 639px)").matches
+          ? firstMobileNew.current
+          : firstNew.current;
+      target?.focus({ preventScroll: true });
+    });
   }
 
   return (
     <>
-      <RevealGroup as="ul" className={`mt-10 lg:mt-[47px] ${GRID}`}>
+      <RevealGroup
+        as="ul"
+        data-mobile-fillings-limit={tastingSet && rest.length > 0 ? 6 : 8}
+        data-fillings-expanded={open}
+        className={`mt-10 lg:mt-[47px] ${GRID}`}
+      >
         {first.map((filling, index) => (
-          <li key={filling.id}>
+          <li
+            key={filling.id}
+            ref={index === 6 ? firstMobileNew : undefined}
+            tabIndex={index === 6 ? -1 : undefined}
+            className="outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          >
             <FillingCard filling={filling} priority={index < 4} />
           </li>
         ))}

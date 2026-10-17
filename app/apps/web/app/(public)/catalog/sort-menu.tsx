@@ -80,17 +80,35 @@ export function SortMenu({ value, onChange }: { value: Sort; onChange: (sort: So
             setOpen(true);
           }
         }}
-        className="flex h-10 items-center gap-[7px] text-sm whitespace-nowrap text-ink"
+        className="flex h-10 items-center gap-[7px] text-sm whitespace-nowrap text-ink max-sm:h-11 max-sm:w-full max-sm:justify-center max-sm:border max-sm:border-line max-sm:px-2"
       >
-        <span className="text-ink-muted">Сначала</span>
-        <span className="font-semibold">{SORT_LABELS[value]}</span>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          aria-hidden="true"
+          className="shrink-0 sm:hidden"
+        >
+          <path
+            d="M5 14V3m0 0L2 6m3-3 3 3M13 4v11m0 0 3-3m-3 3-3-3"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className="text-ink-muted max-sm:hidden">Сначала</span>
+        <span className="font-semibold max-sm:font-normal max-sm:first-letter:uppercase">
+          {SORT_LABELS[value]}
+        </span>
         <svg
           width="11"
           height="9"
           viewBox="0 0 11 9"
           fill="none"
           aria-hidden="true"
-          className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          className={`transition-transform duration-150 max-sm:hidden ${open ? "rotate-180" : ""}`}
         >
           <path d="M0.5 0.5L5.5 8L10.5 0.5" stroke="currentColor" strokeWidth="1" />
         </svg>

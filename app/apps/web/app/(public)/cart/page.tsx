@@ -48,7 +48,7 @@ export default async function CartPage() {
       : null;
 
   return (
-    <div className="container-page pt-8 pb-20 xl:pt-[41px] xl:pb-[137px]">
+    <div className="cart-page public-page container-page pt-8 pb-20 xl:pt-[41px] xl:pb-[137px]">
       <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: "Корзина" }]} />
       <h1 className="mt-6 font-display text-section leading-[1.1] text-ink xl:mt-[22px]">
         Корзина

@@ -182,7 +182,7 @@ export function FilterPanel({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={openPanel}
-        className="flex h-10 items-center gap-[9px] rounded-[2px] border border-ink px-[19px] text-[13px] font-semibold text-ink transition-colors duration-150 hover:border-accent hover:text-accent"
+        className="flex h-10 items-center gap-[9px] rounded-[2px] border border-ink px-[19px] text-[13px] font-semibold text-ink transition-colors duration-150 hover:border-accent hover:text-accent max-sm:h-11 max-sm:w-full max-sm:justify-center max-sm:border-line max-sm:text-sm max-sm:font-normal"
       >
         <SlidersIcon />
         Фильтры

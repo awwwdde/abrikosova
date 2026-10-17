@@ -77,7 +77,7 @@ export function LegalPage({
 }) {
   const revision = formatLongDate(revisedAt);
   return (
-    <article className="container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[121px]">
+    <article className="legal-page public-page container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[121px]">
       <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: title }]} />
       <RevealText
         as="h1"

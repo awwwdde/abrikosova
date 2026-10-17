@@ -16,6 +16,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Calculator } from "@/components/custom-cakes/calculator";
 import { DesignCard, IdeaCard } from "@/components/custom-cakes/design-card";
+import { DesignGrid } from "@/components/custom-cakes/design-grid";
 import { FillingsSection } from "@/components/custom-cakes/fillings-section";
 import { FaqColumns } from "@/components/home/faq";
 import { JsonLd } from "@/components/json-ld";
@@ -104,7 +105,7 @@ export default async function CustomCakesPage({ searchParams }: { searchParams: 
   const title = info?.title ?? "Торты на заказ";
 
   return (
-    <div className="container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[128px]">
+    <div className="cakes-page public-page container-page pt-8 pb-20 xl:pt-[35px] xl:pb-[128px]">
       <Breadcrumbs items={[{ href: "/", label: "Главная" }, { label: title }]} />
 
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_576px] lg:items-end xl:mt-[21px]">
@@ -195,10 +196,7 @@ export default async function CustomCakesPage({ searchParams }: { searchParams: 
             action={<LinkButton href="/custom-cakes">Все дизайны</LinkButton>}
           />
         ) : (
-          <RevealGroup
-            as="ul"
-            className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-y-[55px]"
-          >
+          <DesignGrid key={occasion ?? "all"} count={list.items.length}>
             <li>
               <IdeaCard text={info?.idea_text ?? null} />
             </li>
@@ -207,7 +205,7 @@ export default async function CustomCakesPage({ searchParams }: { searchParams: 
                 <DesignCard card={card} priority={index < 3} />
               </li>
             ))}
-          </RevealGroup>
+          </DesignGrid>
         )}
       </section>
 

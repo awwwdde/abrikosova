@@ -196,7 +196,7 @@ function Line({
   const showMeta = meta.length > 0;
 
   return (
-    <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-4 pt-[24px] pb-[23px] sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:gap-x-6">
+    <div className="relative grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 pt-4 pb-4 sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:gap-x-6 sm:pt-[24px] sm:pb-[23px]">
       <Link
         href={href}
         tabIndex={-1}
@@ -212,7 +212,7 @@ function Line({
         )}
       </Link>
 
-      <div className="min-w-0">
+      <div className="min-w-0 max-sm:pr-8">
         <h3 className="font-display text-[24px] leading-[30px] text-ink max-sm:text-xl">
           <Link href={href} className="transition-colors hover:text-accent">
             {typograf(line.name)}
@@ -279,9 +279,19 @@ function Line({
           type="button"
           onClick={onRemove}
           aria-label={`Удалить: ${line.name}`}
-          className="order-3 text-[13px] text-ink-subtle underline underline-offset-[3px] transition-colors hover:text-accent sm:order-none sm:mt-[13px]"
+          className="order-3 text-[13px] text-ink-subtle underline underline-offset-[3px] transition-colors hover:text-accent max-sm:absolute max-sm:top-2 max-sm:-right-2 max-sm:flex max-sm:size-10 max-sm:items-center max-sm:justify-center sm:order-none sm:mt-[13px]"
         >
-          Удалить
+          <span className="max-sm:sr-only">Удалить</span>
+          <svg
+            className="sm:hidden"
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path d="m2 2 10 10M12 2 2 12" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
         </button>
       </div>
     </div>

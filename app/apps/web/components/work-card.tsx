@@ -146,6 +146,9 @@ export function WorkCard({
           className="mt-2 hidden text-sm font-medium text-accent underline underline-offset-4 [@media(hover:none)]:inline-block"
         >
           {typograf("Заказать похожий")}
+          <span aria-hidden="true" className="ml-2 inline-block">
+            →
+          </span>
         </Link>
       ) : null}
     </article>

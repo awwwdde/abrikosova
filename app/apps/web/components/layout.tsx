@@ -179,6 +179,14 @@ export function Header({
 
   useEffect(() => setHydrated(true), []);
   useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeMobile = () => {
+      if (desktop.matches) setMobileOpen(false);
+    };
+    desktop.addEventListener("change", closeMobile);
+    return () => desktop.removeEventListener("change", closeMobile);
+  }, []);
+  useEffect(() => {
     setMobileOpen(false);
     setOpenMenu(null);
   }, [pathname]);
@@ -220,8 +228,8 @@ export function Header({
             overlay
               ? "h-0"
               : accentPage
-                ? "h-[90px] sm:h-[100px] lg:h-24 xl:h-(--header-h-compact)"
-                : "h-[90px] sm:h-[100px] lg:h-24 xl:h-(--header-h)"
+                ? "h-[90px] sm:h-[72px] lg:h-24 xl:h-(--header-h-compact)"
+                : "h-[90px] sm:h-[72px] lg:h-24 xl:h-(--header-h)"
           }
         />
       )}
@@ -249,7 +257,7 @@ export function Header({
         data-compact={compact || undefined}
         className={[
           isStatic ? "relative" : "fixed inset-x-0 top-0",
-          "z-40 h-[90px] transition-[height,background-color] duration-200 ease-out-soft sm:h-[100px] lg:h-24",
+          "z-40 h-[90px] transition-[height,background-color] duration-200 ease-out-soft sm:h-[72px] lg:h-24",
           compact ? "xl:h-(--header-h-compact)" : "xl:h-(--header-h)",
           theme.bar,
         ].join(" ")}
@@ -276,7 +284,7 @@ export function Header({
             className={`shrink-0 transition-colors duration-200 ${theme.logo}`}
             aria-label="Главная"
           >
-            <Logo className="w-[100px] sm:w-[122px] lg:w-[136px] xl:w-[161px]" />
+            <Logo className="w-[102px] sm:w-[122px] lg:w-[136px] xl:w-[161px]" />
           </Link>
 
           <nav
@@ -356,7 +364,7 @@ export function Header({
                   и доступное имя совпадает с видимым текстом. На телефоне — сумка */}
               <BagIcon className="mr-2 sm:hidden" />
               <span className="max-sm:sr-only">Корзина </span>
-              <span className="tnum ml-1 text-sm sm:ml-2">{count}</span>
+              <span className="tnum text-xs sm:ml-2 sm:text-sm">{count}</span>
               <span className="sr-only">{typograf(" — товаров в корзине")}</span>
             </Link>
 
@@ -378,13 +386,13 @@ export function Header({
 
             <button
               type="button"
-              className={`-mr-2 ml-4 inline-flex size-10 items-center justify-center sm:ml-6 lg:hidden ${theme.secondary}`}
+              className={`-mr-2 ml-3.5 inline-flex size-10 items-center justify-center sm:ml-6 lg:hidden ${theme.secondary}`}
               aria-expanded={mobileOpen}
               aria-controls="mobile-menu"
               aria-label="Открыть меню"
               onClick={() => setMobileOpen(true)}
             >
-              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+              <svg width="18" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
                 <path d="M0 1h16M0 6h16M0 11h16" stroke="currentColor" strokeWidth="1.2" />
               </svg>
             </button>

@@ -71,7 +71,7 @@ export function Picture({
 
   return (
     <div
-      style={{ aspectRatio: ratio }}
+      style={{ aspectRatio: `var(--picture-ratio, ${ratio})` }}
       className={`relative w-full overflow-hidden bg-photo ${className}`}
     >
       <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover" />
@@ -97,7 +97,7 @@ export function ImagePlaceholder({
 }) {
   return (
     <div
-      style={fill ? undefined : { aspectRatio: ratio }}
+      style={fill ? undefined : { aspectRatio: `var(--picture-ratio, ${ratio})` }}
       className={`flex items-center justify-center bg-photo ${
         fill ? "absolute inset-0" : "w-full"
       } ${className}`}
