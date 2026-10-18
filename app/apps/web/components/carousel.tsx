@@ -11,7 +11,7 @@
  * Мышью ленту можно тянуть, зажав кнопку (`useDragScroll`).
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import {
   Children,
   useCallback,

@@ -11,7 +11,7 @@
  * страница контента `gallery` («Страницы сайта» → «Работы»).
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import type { Metadata } from "next";
 import { CtaBanner } from "@/components/cta-banner";
 import { Reveal, RevealGroup, RevealText } from "@/components/motion";

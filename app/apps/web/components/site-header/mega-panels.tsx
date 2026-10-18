@@ -11,7 +11,7 @@
  */
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { imageUrl } from "@/lib/api";
 import { typograf } from "@/lib/format";
 import {

@@ -11,7 +11,7 @@
  * и нажатие статически, без наведения мыши.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import type { ComponentProps } from "react";
 
 export type ForceState = "hover" | "pressed";

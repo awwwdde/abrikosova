@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { Button } from "@/components/ui";

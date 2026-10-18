@@ -12,7 +12,7 @@
  * заявки пока ведут на `?request=1`, карточки — на `/custom-cakes/<slug>`.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import type { Metadata } from "next";
 import { Calculator } from "@/components/custom-cakes/calculator";
 import { DesignCard, IdeaCard } from "@/components/custom-cakes/design-card";

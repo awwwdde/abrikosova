@@ -22,7 +22,7 @@
  *   (после добавления — плашка «в корзине»); пока вводят надпись, панели нет.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useCart } from "@/components/cart-context";
 import { FloatingActionBar } from "@/components/floating-action-bar";

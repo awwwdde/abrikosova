@@ -14,7 +14,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useLenis } from "@/components/lenis-provider";
 import { Logo } from "@/components/logo";

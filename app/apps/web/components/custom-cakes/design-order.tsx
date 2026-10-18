@@ -11,7 +11,7 @@
  * в адресе, без JS это обычная ссылка с минимумом гостей.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useId, useState } from "react";
 import { GuestsStepper, MAX_GUESTS } from "@/components/custom-cakes/guests-stepper";
 import { formatKg, useEstimate } from "@/components/custom-cakes/use-estimate";

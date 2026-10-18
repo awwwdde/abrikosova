@@ -21,7 +21,7 @@
  * длинное название в две строки не сдвигает ряд цен (находка 004, макет каталога).
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { Picture, PlusButton, PlusIcon, Price, Tag } from "@/components/ui";

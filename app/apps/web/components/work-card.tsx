@@ -15,7 +15,7 @@
  * текстовой ссылкой под характеристиками, а оверлей с кнопкой не показывается.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { Picture, buttonClass } from "@/components/ui";
 import { OCCASION_LABELS, type Occasion } from "@/lib/api";
 import { formatMonthYear, formatWorkMeta } from "@/lib/format";

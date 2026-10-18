@@ -11,7 +11,7 @@
  * а пока он грузится, старая сетка бледнеет — пустой сетки человек не видит.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useTransition, type MouseEvent } from "react";
 import { FilterPanel } from "@/app/(public)/catalog/filter-panel";

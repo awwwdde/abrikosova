@@ -3,7 +3,7 @@
  */
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import type { ReactNode } from "react";
 import { JsonLd } from "@/components/json-ld";
 import { Reveal, RevealText } from "@/components/motion";

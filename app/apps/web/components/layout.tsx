@@ -35,7 +35,7 @@
  */
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart-context";

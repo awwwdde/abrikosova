@@ -17,7 +17,7 @@
  * обычные ссылки, без role="menu". Esc и клик мимо закрывают.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { typograf } from "@/lib/format";
 

@@ -10,7 +10,7 @@
  * Наведение на карточку красит название в бордо (кадр «состояния»).
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { Picture, buttonClass } from "@/components/ui";
 import { formatPrice, type CustomCakeCard } from "@/lib/api";
 import { formatDesignMeta, typograf } from "@/lib/format";

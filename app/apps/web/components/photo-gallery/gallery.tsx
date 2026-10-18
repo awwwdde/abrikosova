@@ -23,6 +23,7 @@
  */
 
 import Image from "next/image";
+import { AnimatePresence } from "motion/react";
 import { useRef, useState, type KeyboardEvent } from "react";
 import { imageUrl } from "@/lib/api";
 import { typograf } from "@/lib/format";
@@ -77,7 +78,12 @@ export function PhotoGallery({
     // На телефоне большое фото — лента со свайпом: прокручиваем к выбранному
     const strip = track.current;
     if (strip && strip.scrollWidth > strip.clientWidth) {
-      strip.scrollTo({ left: next * strip.clientWidth, behavior: "smooth" });
+      strip.scrollTo({
+        left: next * strip.clientWidth,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
     }
   }
 
@@ -104,7 +110,7 @@ export function PhotoGallery({
           const index = Math.round(strip.scrollLeft / strip.clientWidth);
           if (index !== active) setActive(index);
         }}
-        className="scrollbar-none flex w-full shrink-0 snap-x snap-mandatory overflow-x-auto max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] sm:overflow-hidden xl:w-[576px]"
+        className="scrollbar-none flex w-full shrink-0 snap-x snap-mandatory overflow-x-auto max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] sm:relative sm:aspect-[4/5] sm:overflow-hidden xl:w-[576px]"
       >
         {photos.map((photo, index) => {
           const src = imageUrl(photo?.storageKey);
@@ -114,10 +120,11 @@ export function PhotoGallery({
           return (
             <div
               key={photo?.key ?? "empty"}
-              className={`relative aspect-[4/5] w-full shrink-0 snap-center bg-photo ${
-                index === active ? "" : "sm:hidden"
+              className={`relative aspect-[4/5] w-full shrink-0 snap-center bg-photo sm:absolute sm:inset-0 sm:transition-opacity sm:duration-300 sm:ease-out-soft motion-reduce:transition-none ${
+                index === active ? "sm:opacity-100" : "sm:pointer-events-none sm:opacity-0"
               }`}
               aria-hidden={index === active ? undefined : true}
+              inert={index !== active}
             >
               {src ? (
                 <Image
@@ -212,18 +219,21 @@ export function PhotoGallery({
         </div>
       ) : null}
 
-      {zoomed !== null ? (
-        <Lightbox
-          name={name}
-          start={zoomed}
-          onClose={() => setZoomed(null)}
-          photos={photos.map((photo, index) => ({
-            key: photo?.key ?? String(index),
-            storageKey: photo?.storageKey,
-            caption: caption(photo, name),
-          }))}
-        />
-      ) : null}
+      <AnimatePresence>
+        {zoomed !== null ? (
+          <Lightbox
+            key="lightbox"
+            name={name}
+            start={zoomed}
+            onClose={() => setZoomed(null)}
+            photos={photos.map((photo, index) => ({
+              key: photo?.key ?? String(index),
+              storageKey: photo?.storageKey,
+              caption: caption(photo, name),
+            }))}
+          />
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

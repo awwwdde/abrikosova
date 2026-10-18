@@ -491,6 +491,35 @@
   }
 }
 
+/* Переход страниц не двигает фиксированную шапку и не меняет геометрию сайта. */
+html[data-page-transition] [data-site-header] {
+  view-transition-name: site-header;
+}
+
+html[data-page-transition]::view-transition-group(*) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease-out-soft);
+}
+
+html[data-page-transition]::view-transition-old(root),
+html[data-page-transition]::view-transition-new(root) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease-out-soft);
+}
+
+html[data-page-transition]::view-transition-old(site-header),
+html[data-page-transition]::view-transition-new(site-header) {
+  animation-duration: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-page-transition]::view-transition-group(*),
+  html[data-page-transition]::view-transition-old(*),
+  html[data-page-transition]::view-transition-new(*) {
+    animation-duration: 0s;
+  }
+}
+
 /*
   Брейкпоинты админки в px (011g). Встроенные sm…2xl Tailwind заданы в rem, а rem в
   медиазапросе — это размер шрифта браузера по умолчанию, и CSS его не переопределит

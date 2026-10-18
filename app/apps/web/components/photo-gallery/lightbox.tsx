@@ -15,6 +15,7 @@
  */
 
 import Image from "next/image";
+import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLenis } from "@/components/lenis-provider";
@@ -51,13 +52,12 @@ export function Lightbox({
   onClose: () => void;
 }) {
   const [index, setIndex] = useState(start);
+  const reduce = useReducedMotion();
   const lenis = useLenis();
   const dialog = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const touchX = useRef<number | null>(null);
   const count = photos.length;
-  const photo = photos[index]!;
-  const src = imageUrl(photo.storageKey);
 
   const go = useCallback(
     (step: number) => setIndex((current) => (current + step + count) % count),
@@ -125,8 +125,12 @@ export function Lightbox({
   );
 
   return createPortal(
-    <div
+    <motion.div
       ref={dialog}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: reduce ? 0 : 0.2, ease: [0.2, 0, 0, 1] }}
       role="dialog"
       aria-modal="true"
       aria-label={`Фото: ${name}`}
@@ -161,24 +165,35 @@ export function Lightbox({
 
       {/* Фото 4:5: высота окна минус поля 76 сверху и снизу, не шире окна */}
       <div className="relative aspect-[4/5] h-[min(calc(100dvh-152px),125vw)] max-w-full">
-        {src ? (
-          <Image
-            key={photo.key}
-            src={src}
-            alt={photo.caption}
-            fill
-            sizes="(min-width: 768px) 664px, 100vw"
-            className="object-cover"
-          />
-        ) : (
-          <span
-            role="img"
-            aria-label={photo.caption}
-            className="absolute inset-0 flex items-center justify-center bg-photo px-4 text-center text-sm text-ink-subtle"
-          >
-            {typograf(photo.caption)}
-          </span>
-        )}
+        {photos.map((photo, photoIndex) => {
+          const src = imageUrl(photo.storageKey);
+          const active = photoIndex === index;
+          return (
+            <div
+              key={photo.key}
+              aria-hidden={!active || undefined}
+              className={`absolute inset-0 transition-opacity duration-250 ease-out-soft motion-reduce:transition-none ${active ? "opacity-100" : "opacity-0"}`}
+            >
+              {src ? (
+                <Image
+                  src={src}
+                  alt={active ? photo.caption : ""}
+                  fill
+                  sizes="(min-width: 768px) 664px, 100vw"
+                  className="object-cover"
+                />
+              ) : (
+                <span
+                  role="img"
+                  aria-label={photo.caption}
+                  className="absolute inset-0 flex items-center justify-center bg-photo px-4 text-center text-sm text-ink-subtle"
+                >
+                  {typograf(photo.caption)}
+                </span>
+              )}
+            </div>
+          );
+        })}
         {count > 1 ? (
           <>
             {arrow("left", "absolute top-1/2 right-full mr-8 -translate-y-1/2 max-md:hidden")}
@@ -196,7 +211,7 @@ export function Lightbox({
           {arrow("right", "md:hidden")}
         </div>
       ) : null}
-    </div>,
+    </motion.div>,
     document.body,
   );
 }

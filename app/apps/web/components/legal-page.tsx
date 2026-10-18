@@ -10,7 +10,7 @@
  * его же показывает подвал. Нет даты — строки «Редакция от» нет.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import type { ReactNode } from "react";
 import { Reveal, RevealText } from "@/components/motion";
 import { Breadcrumbs } from "@/components/ui";

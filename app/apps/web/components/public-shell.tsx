@@ -2,6 +2,7 @@ import { Analytics } from "@/components/analytics";
 import { SiteFooter } from "@/components/footer";
 import { Header } from "@/components/layout";
 import { LenisProvider } from "@/components/lenis-provider";
+import { PageTransitions } from "@/components/page-transition";
 import type { HeaderMenuData } from "@/components/site-header/menu-data";
 import { apiGet, type Category, type ContactsPage, type CustomCakesContentPage } from "@/lib/api";
 
@@ -45,13 +46,15 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
   };
   return (
     <LenisProvider>
-      <div className="public-site flex min-h-screen flex-col">
-        <Header phone={contacts?.phone ?? null} menu={menu} />
-        <main className="flex-1">{children}</main>
-        <SiteFooter contacts={contacts} categories={categories} />
-      </div>
-      {/* Метрика и плашка о cookie — только здесь: в админке их быть не должно (012) */}
-      <Analytics />
+      <PageTransitions>
+        <div className="public-site flex min-h-screen flex-col">
+          <Header phone={contacts?.phone ?? null} menu={menu} />
+          <main className="flex-1">{children}</main>
+          <SiteFooter contacts={contacts} categories={categories} />
+        </div>
+        {/* Метрика и плашка о cookie — только здесь: в админке их быть не должно (012) */}
+        <Analytics />
+      </PageTransitions>
     </LenisProvider>
   );
 }

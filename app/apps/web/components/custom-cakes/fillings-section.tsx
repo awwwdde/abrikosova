@@ -13,7 +13,7 @@
  * «В корзине» ведёт в корзину, как плашка на странице товара.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { FillingCard } from "@/components/filling-card";

@@ -9,7 +9,7 @@
  * источник — контекст корзины (он же обновляет счётчик в шапке).
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useMemo, useState } from "react";
 import { useCart } from "@/components/cart-context";
 import { CartLines } from "@/components/cart/cart-lines";

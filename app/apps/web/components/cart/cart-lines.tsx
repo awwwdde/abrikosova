@@ -17,7 +17,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useCart } from "@/components/cart-context";
 import { ApiError, imageUrl, type CartItem } from "@/lib/api";

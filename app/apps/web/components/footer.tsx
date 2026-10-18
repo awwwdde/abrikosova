@@ -15,7 +15,7 @@
  * Серверный компонент: данные приходят из layout, JS в браузер не уходит.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/logo";
 import { Reveal } from "@/components/motion";

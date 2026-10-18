@@ -14,7 +14,7 @@
  *   документе: ссылки разбросаны по шапке, подвалу и страницам.
  */
 
-import Link from "next/link";
+import Link from "@/components/page-transition";
 import { usePathname, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { Suspense, useEffect, useState } from "react";
