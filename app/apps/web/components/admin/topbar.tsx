@@ -30,7 +30,7 @@ function useOutside(ref: RefObject<HTMLElement | null>, open: boolean, close: ()
 }
 
 const POPOVER =
-  "absolute top-[calc(100%+8px)] right-0 z-40 rounded-admin-card bg-admin-card p-2 shadow-admin-hover";
+  "admin-popover absolute top-[calc(100%+8px)] right-0 z-40 rounded-admin-card bg-admin-card p-2 shadow-admin-hover";
 
 // --- Хлебные крошки ---
 

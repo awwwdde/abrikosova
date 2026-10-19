@@ -91,10 +91,18 @@ NGINX_PID=$!
     curl -fsS -o /dev/null http://127.0.0.1:3000/healthz && break
     sleep 2
   done
-  curl -fsS -o /dev/null -X POST http://127.0.0.1:3000/api/revalidate \
+  if curl -fsS --max-time 15 -o /dev/null -X POST http://127.0.0.1:3000/api/revalidate \
     -H "Content-Type: application/json" -H "x-revalidate-secret: ${REVALIDATE_SECRET}" \
-    -d '{"paths":["/","/catalog","/custom-cakes","/gallery","/about","/contacts","/privacy","/terms","/consent","/sitemap.xml"],"tags":["categories","home","contacts","about","custom_cakes","gallery","legal"]}' \
-    && echo "Кэш страниц обновлён после старта" || echo "Кэш страниц не обновлён — обновится по ISR" >&2
+    -d '{"paths":["/","/catalog","/custom-cakes","/gallery","/about","/contacts","/privacy","/terms","/consent","/sitemap.xml"],"tags":["categories","home","contacts","about","custom_cakes","gallery","legal"]}'; then
+    # Сброс лишь помечает ISR устаревшим. Сами страницы собираем до первого посетителя.
+    for path in / /catalog /custom-cakes /gallery /about /contacts /privacy /terms /consent /sitemap.xml; do
+      curl -fsS --connect-timeout 2 --max-time 30 -o /dev/null "http://127.0.0.1:3000${path}" \
+        || echo "Не удалось прогреть ${path} — обновится по ISR" >&2
+    done
+    echo "Прогрев публичных страниц завершён после старта"
+  else
+    echo "Кэш страниц не обновлён — обновится по ISR" >&2
+  fi
 ) &
 
 # Первый упавший из трёх процессов останавливает контейнер (прогрев кэша — не в счёт)

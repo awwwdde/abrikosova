@@ -21,7 +21,8 @@ import type {
   VariantIn,
 } from "./api";
 
-export type Availability = "today" | "preorder" | "out";
+import { availabilityOf } from "./product-availability";
+export { availabilityOf, type Availability } from "./product-availability";
 
 /** «4 200», «4200,50» → 4200.5; пусто → null; мусор → NaN. */
 export function parseNumber(text: string): number | null {
@@ -199,13 +200,6 @@ const text = (value: string | number | null | undefined) =>
 function trimDecimal(value: string | null | undefined): string {
   if (value === null || value === undefined) return "";
   return text(Number(value));
-}
-
-export function availabilityOf(
-  product: Pick<ProductAdmin, "is_available" | "lead_time_days">,
-): Availability {
-  if (!product.is_available) return "out";
-  return product.lead_time_days > 0 ? "preorder" : "today";
 }
 
 export function toFormValues(product: ProductAdmin): ProductFormValues {

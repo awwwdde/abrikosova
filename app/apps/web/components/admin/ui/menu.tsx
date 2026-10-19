@@ -91,7 +91,7 @@ export function FilterMenu<T extends string>({
         aria-label={label}
         hidden={!open}
         onKeyDown={onMenuKey}
-        className="absolute top-[calc(100%+6px)] right-0 z-40 min-w-48 rounded-admin-card bg-admin-card p-1.5 shadow-admin-hover"
+        className="admin-popover absolute top-[calc(100%+6px)] right-0 z-40 min-w-48 rounded-admin-card bg-admin-card p-1.5 shadow-admin-hover"
       >
         {options.map((option, index) => {
           const selected = option.value === value;

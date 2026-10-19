@@ -34,7 +34,7 @@
  * и мобильное меню (components/site-header/mobile-menu.tsx).
  */
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import dynamic from "next/dynamic";
 import Link from "@/components/page-transition";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -42,9 +42,15 @@ import { useCart } from "@/components/cart-context";
 import { Logo } from "@/components/logo";
 import { NAV_LINKS } from "@/components/nav-links";
 import { BagIcon, Chevron } from "@/components/site-header/icons";
-import { CakesPanel, CatalogPanel } from "@/components/site-header/mega-panels";
 import type { HeaderMenuData } from "@/components/site-header/menu-data";
-import { MobileMenu } from "@/components/site-header/mobile-menu";
+// Закрытые меню не нужны для первого экрана; код загружается при намерении открыть.
+const MobileMenu = dynamic(
+  () => import("@/components/site-header/mobile-menu").then((module) => module.MobileMenu),
+  { ssr: false },
+);
+const DesktopMenu = dynamic(() => import("@/components/site-header/desktop-menu"), {
+  ssr: false,
+});
 import { formatPhone, typograf } from "@/lib/format";
 
 export type HeaderVariant = "transparent" | "accent" | "light";
@@ -167,7 +173,7 @@ export function Header({
   const [hydrated, setHydrated] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const buttons = useRef<Partial<Record<MenuKey, HTMLButtonElement | null>>>({});
-  const reduce = useReducedMotion();
+  const [menusReady, setMenusReady] = useState(false);
 
   const accentPage = !isStatic && isAccentPath(pathname);
   const compact = isStatic ? Boolean(forcedCompact) : accentPage || scrolled;
@@ -234,22 +240,12 @@ export function Header({
         />
       )}
 
-      {/* Затемнение под мега-меню; клик по нему закрывает меню */}
-      <AnimatePresence>
-        {openMenu ? (
-          <motion.div
-            key="menu-dim"
-            aria-hidden="true"
-            className="fixed inset-0 z-30 hidden bg-night/50 lg:block"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={close}
-          />
-        ) : null}
-      </AnimatePresence>
-
+      {/* Простое затемнение не требует загрузки движка анимаций вместе с шапкой. */}
+      <div
+        aria-hidden="true"
+        onClick={close}
+        className={`fixed inset-0 z-30 hidden bg-night/50 transition-opacity duration-200 motion-reduce:transition-none lg:block ${openMenu ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      />
       <header
         ref={headerRef}
         data-site-header
@@ -315,34 +311,20 @@ export function Header({
                       aria-expanded={open}
                       aria-controls={`mega-${key}`}
                       aria-current={current}
-                      onClick={() => setOpenMenu(open ? null : key)}
+                      onPointerEnter={() => setMenusReady(true)}
+                      onFocus={() => setMenusReady(true)}
+                      onClick={() => {
+                        setMenusReady(true);
+                        setOpenMenu(open ? null : key);
+                      }}
                       className={`${itemClass} ${open ? "underline underline-offset-[5px]" : ""}`}
                     >
                       {typograf(link.label)}
                       <Chevron open={open} className="ml-2 xl:mr-1.5 xl:ml-[9px]" />
                     </button>
-                    {/* Выезжает вниз из-под шапки: обёртка обрезает её по нижнему краю шапки */}
-                    <div className="absolute inset-x-0 top-full overflow-hidden">
-                      <AnimatePresence initial={false}>
-                        {open ? (
-                          <motion.div
-                            key={key}
-                            id={`mega-${key}`}
-                            className="border-t border-line bg-canvas"
-                            initial={reduce ? { opacity: 0 } : { y: "-100%" }}
-                            animate={reduce ? { opacity: 1 } : { y: 0 }}
-                            exit={reduce ? { opacity: 0 } : { y: "-100%" }}
-                            transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
-                          >
-                            {key === "catalog" ? (
-                              <CatalogPanel categories={menu.categories} onNavigate={close} />
-                            ) : (
-                              <CakesPanel cakes={menu.cakes} onNavigate={close} />
-                            )}
-                          </motion.div>
-                        ) : null}
-                      </AnimatePresence>
-                    </div>
+                    {menusReady ? (
+                      <DesktopMenu menuKey={key} open={open} menu={menu} onClose={close} />
+                    ) : null}
                   </div>
                 );
               }
@@ -390,7 +372,12 @@ export function Header({
               aria-expanded={mobileOpen}
               aria-controls="mobile-menu"
               aria-label="Открыть меню"
-              onClick={() => setMobileOpen(true)}
+              onPointerEnter={() => setMenusReady(true)}
+              onFocus={() => setMenusReady(true)}
+              onClick={() => {
+                setMenusReady(true);
+                setMobileOpen(true);
+              }}
             >
               <svg width="18" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
                 <path d="M0 1h16M0 6h16M0 11h16" stroke="currentColor" strokeWidth="1.2" />
@@ -400,13 +387,15 @@ export function Header({
         </div>
       </header>
 
-      <MobileMenu
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        tel={tel}
-        count={count}
-        menu={menu}
-      />
+      {menusReady ? (
+        <MobileMenu
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          tel={tel}
+          count={count}
+          menu={menu}
+        />
+      ) : null}
     </>
   );
 }

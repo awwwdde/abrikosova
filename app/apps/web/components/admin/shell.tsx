@@ -14,12 +14,14 @@
 
 import { ArrowSquareOut, List, X } from "@phosphor-icons/react";
 import Link from "next/link";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAdminAuth } from "@/components/admin/auth-context";
 import { BreadcrumbProvider } from "@/components/admin/breadcrumbs";
 import { CountersProvider, useCounters } from "@/components/admin/counters";
 import { isActive, navFor } from "@/components/admin/nav";
+import { AdminPageMotion, useDialogMotion } from "@/components/admin/motion";
 import { BellMenu, Breadcrumbs, ProfileMenu, SearchBox } from "@/components/admin/topbar";
 import { CountPill, IconButton, ToastProvider } from "@/components/admin/ui";
 import { Logo } from "@/components/logo";
@@ -29,6 +31,7 @@ const ASIDE_FOCUS =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-cream";
 
 function SidebarNav({ variant }: { variant: "rail" | "drawer" }) {
+  const reduce = useReducedMotion();
   const { user } = useAdminAuth();
   const { counters } = useCounters();
   const pathname = usePathname();
@@ -43,66 +46,70 @@ function SidebarNav({ variant }: { variant: "rail" | "drawer" }) {
         <Logo className="h-[30px] w-[108px] opacity-95" />
       </Link>
 
-      <nav aria-label="Разделы админки" className="flex flex-col gap-0.5">
-        {navFor(user?.role).map((group) => (
-          <div key={group.title ?? "main"} className="flex flex-col gap-0.5">
-            {group.title ? (
-              <p className="mt-[22px] mb-1.5 ml-[18px] text-[11px] font-bold tracking-[0.14em] text-admin-side-group uppercase">
-                {group.title}
-              </p>
-            ) : null}
-            {group.items.map((item) => {
-              const active = isActive(item.href, pathname);
-              const count = item.counter ? (counters?.[item.counter] ?? 0) : 0;
-              const Icon = item.icon;
-              // Размер и отступы пункта одинаковые в любом состоянии (011g): иначе
-              // при выборе раздела сдвигались пункты ниже и счётчик. Активный пункт
-              // отличается только заливкой и цветом; заливка у меню — отдельный слой
-              const shape = active
-                ? "font-bold text-admin-side"
-                : "font-medium text-admin-side-text hover:bg-admin-side-ink/8 hover:text-admin-side-ink";
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  aria-current={active ? "page" : undefined}
-                  className={`relative mr-3.5 flex h-11 items-center gap-[13px] rounded-admin-control pl-[18px] text-[14.5px] whitespace-nowrap no-underline transition-colors duration-150 motion-reduce:transition-none ${shape} ${ASIDE_FOCUS}`}
-                >
-                  {active ? (
-                    <span
-                      aria-hidden="true"
-                      className={
-                        variant === "rail"
-                          ? // До правого края меню: 14px отступа пункта
-                            "admin-nav-fill absolute inset-y-0 left-0 -right-3.5 rounded-l-[22px] bg-admin-panel"
-                          : "absolute inset-0 rounded-admin-control bg-admin-panel"
-                      }
-                    />
-                  ) : null}
-                  <Icon aria-hidden="true" size={19} className="relative shrink-0" />
-                  {/* Жирный активный текст шире среднего: «Торты на заказ и начинки» в
+      <LayoutGroup id={`admin-nav-${variant}`}>
+        <nav aria-label="Разделы админки" className="flex flex-col gap-0.5">
+          {navFor(user?.role).map((group) => (
+            <div key={group.title ?? "main"} className="flex flex-col gap-0.5">
+              {group.title ? (
+                <p className="mt-[22px] mb-1.5 ml-[18px] text-[11px] font-bold tracking-[0.14em] text-admin-side-group uppercase">
+                  {group.title}
+                </p>
+              ) : null}
+              {group.items.map((item) => {
+                const active = isActive(item.href, pathname);
+                const count = item.counter ? (counters?.[item.counter] ?? 0) : 0;
+                const Icon = item.icon;
+                // Размер и отступы пункта одинаковые в любом состоянии (011g): иначе
+                // при выборе раздела сдвигались пункты ниже и счётчик. Активный пункт
+                // отличается только заливкой и цветом; заливка у меню — отдельный слой
+                const shape = active
+                  ? "font-bold text-admin-side"
+                  : "font-medium text-admin-side-text hover:bg-admin-side-ink/8 hover:text-admin-side-ink";
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={item.label}
+                    aria-current={active ? "page" : undefined}
+                    className={`relative mr-3.5 flex h-11 items-center gap-[13px] rounded-admin-control pl-[18px] text-[14.5px] whitespace-nowrap no-underline transition-colors duration-150 motion-reduce:transition-none ${shape} ${ASIDE_FOCUS}`}
+                  >
+                    {active ? (
+                      <motion.span
+                        layoutId={reduce ? undefined : "active"}
+                        transition={{ type: "spring", stiffness: 450, damping: 40 }}
+                        aria-hidden="true"
+                        className={
+                          variant === "rail"
+                            ? // До правого края меню: 14px отступа пункта
+                              "admin-nav-fill absolute inset-y-0 left-0 -right-3.5 rounded-l-[22px] bg-admin-panel"
+                            : "absolute inset-0 rounded-admin-control bg-admin-panel"
+                        }
+                      />
+                    ) : null}
+                    <Icon aria-hidden="true" size={19} className="relative shrink-0" />
+                    {/* Жирный активный текст шире среднего: «Торты на заказ и начинки» в
                       700 — 181px при 178px места. Заливка активного пункта в меню доходит
                       до края на 14px дальше — подпись занимает и их (левый край тот же) */}
-                  <span
-                    className={`relative min-w-0 grow truncate ${active && variant === "rail" && count === 0 ? "-mr-3.5" : ""}`}
-                  >
-                    {item.label}
-                  </span>
-                  {count > 0 ? (
-                    <span className="relative mr-2.5 shrink-0">
-                      <CountPill>
-                        {count > 99 ? "99+" : count}
-                        <span className="sr-only"> новых</span>
-                      </CountPill>
+                    <span
+                      className={`relative min-w-0 grow truncate ${active && variant === "rail" && count === 0 ? "-mr-3.5" : ""}`}
+                    >
+                      {item.label}
                     </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
+                    {count > 0 ? (
+                      <span className="relative mr-2.5 shrink-0">
+                        <CountPill>
+                          {count > 99 ? "99+" : count}
+                          <span className="sr-only"> новых</span>
+                        </CountPill>
+                      </span>
+                    ) : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      </LayoutGroup>
 
       <a
         href="/"
@@ -120,25 +127,18 @@ function SidebarNav({ variant }: { variant: "rail" | "drawer" }) {
 
 function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-    // Под модальным окном страница не должна прокручиваться пальцем
-    document.documentElement.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.documentElement.style.overflow = "";
-    };
-  }, [open]);
+  useDialogMotion(ref, open, "drawer");
 
   return (
     <dialog
       ref={ref}
       onClose={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       aria-label="Меню админки"
-      className="fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-[min(288px,86vw)] max-w-none bg-admin-side p-0 text-admin-side-ink backdrop:bg-admin-ink/45 adm-lg:hidden"
+      className="admin-motion-dialog fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-[min(288px,86vw)] max-w-none bg-admin-side p-0 text-admin-side-ink backdrop:bg-admin-ink/45 adm-lg:hidden"
       onClick={(event) => {
         // Клик по затемнению (мимо панели) закрывает меню
         if (event.target === event.currentTarget) onClose();
@@ -167,6 +167,14 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
 
   // Переход по пункту меню закрывает выдвижную панель
   useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const close = () => {
+      if (desktop.matches) setMenuOpen(false);
+    };
+    desktop.addEventListener("change", close);
+    return () => desktop.removeEventListener("change", close);
+  }, []);
 
   return (
     <div className="min-h-dvh bg-admin-side font-sans text-admin-ink adm-lg:flex">
@@ -201,7 +209,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
           <ProfileMenu />
         </header>
         <main id="admin-main" tabIndex={-1} className="pt-6 outline-none">
-          {children}
+          <AdminPageMotion>{children}</AdminPageMotion>
         </main>
       </div>
     </div>

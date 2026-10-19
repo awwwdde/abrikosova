@@ -145,8 +145,7 @@ export function PageTransitions({ children }: { children: ReactNode }) {
     return () => {
       preference.removeEventListener("change", stop);
       window.removeEventListener("popstate", onHistory);
-      navigation.current++;
-      cancel();
+      onHistory();
       entry.current?.cancel();
     };
   }, [cancel]);

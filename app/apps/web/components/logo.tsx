@@ -3,14 +3,13 @@
  *
  * Раньше это был PNG через `mask-image`: браузер узнавал о картинке только после
  * загрузки CSS, и Lighthouse называл логотип элементом LCP с задержкой отрисовки.
- * Инлайн-контур рисуется вместе с HTML, без отдельного запроса.
+ * Единственный контур находится в корневом layout; use рисуется без отдельного
+ * запроса и не повторяет длинный путь в шапке, подвале и клиентском JavaScript.
  *
  * Цвет — `currentColor`: один знак работает в бордовой, светлой и прозрачной
  * шапке и в подвале. Контур — components/logo-path.ts (трассировка PNG из
  * new/design/logo.svg, см. комментарий там). Размер 160×44,46 — как в макете.
  */
-
-import { LOGO_PATH } from "@/components/logo-path";
 
 export function Logo({
   className = "",
@@ -31,7 +30,7 @@ export function Logo({
       preserveAspectRatio={fit === "fill" ? "none" : "xMinYMid meet"}
       className={`block w-40 ${fit === "contain" ? "aspect-[160/44.4588] h-auto" : ""} ${className}`}
     >
-      <path fill="currentColor" fillRule="evenodd" d={LOGO_PATH} />
+      <use href="#site-logo-path" fill="currentColor" />
     </svg>
   );
 }

@@ -16,6 +16,12 @@ http {
     access_log off;
     sendfile on;
     server_tokens off;
+    gzip on;
+    gzip_comp_level 5;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
 
     client_body_temp_path /tmp/nginx-body;
     proxy_temp_path /tmp/nginx-proxy;
@@ -33,6 +39,7 @@ http {
 
     server {
         listen 8080;
+        add_header X-Content-Type-Options nosniff always;
 
         # API проверяет цепочку XFF справа через TRUSTED_PROXY_NETWORKS.
         # Непроверенные значения слева не считаются адресом клиента.

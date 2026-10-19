@@ -5,11 +5,14 @@
  */
 
 import { CheckCircle, WarningCircle, X } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useDialogMotion } from "@/components/admin/motion";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -130,6 +133,7 @@ const TOAST_MS = 5000;
  * Исчезают через 5 с; ошибку можно закрыть раньше.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const reduce = useReducedMotion();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
 
@@ -155,9 +159,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     toasts
       .filter((toast) => toast.tone === tone)
       .map((toast) => (
-        <div
+        <motion.div
           key={toast.id}
-          className="pointer-events-auto flex min-w-64 items-center gap-3 rounded-admin-control bg-admin-ink px-4 py-3 text-sm font-semibold text-admin-card shadow-admin-hover transition-[opacity,translate] duration-200 starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none"
+          initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: reduce ? 0 : -4 }}
+          transition={{ duration: reduce ? 0 : 0.18 }}
+          className="pointer-events-auto flex min-w-64 items-center gap-3 rounded-admin-control bg-admin-ink px-4 py-3 text-sm font-semibold text-admin-card shadow-admin-hover"
         >
           {tone === "success" ? (
             <CheckCircle aria-hidden="true" size={20} className="text-admin-green-soft" />
@@ -173,7 +181,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           >
             <X aria-hidden="true" size={14} weight="bold" />
           </button>
-        </div>
+        </motion.div>
       ));
 
   return (
@@ -181,10 +189,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="pointer-events-none fixed right-4 bottom-4 z-[60] flex flex-col items-end gap-2">
         <div role="status" aria-live="polite" className="flex flex-col items-end gap-2">
-          {render("success")}
+          <AnimatePresence>{render("success")}</AnimatePresence>
         </div>
         <div role="alert" aria-live="assertive" className="flex flex-col items-end gap-2">
-          {render("error")}
+          <AnimatePresence>{render("error")}</AnimatePresence>
         </div>
       </div>
     </ToastContext.Provider>
@@ -229,15 +237,11 @@ export function ConfirmDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  useDialogMotion(ref, open, "confirm");
 
   useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-      cancelRef.current?.focus();
-    }
-    if (!open && dialog.open) dialog.close();
+    if (open) cancelRef.current?.focus();
   }, [open]);
 
   return (
@@ -246,12 +250,13 @@ export function ConfirmDialog({
       onClose={onClose}
       onCancel={(event) => {
         // Esc во время запроса не закрывает: результат удаления ещё неизвестен
-        if (loading) event.preventDefault();
+        event.preventDefault();
+        if (!loading) onClose();
       }}
-      aria-labelledby="confirm-title"
-      className="m-auto w-[min(420px,calc(100vw-32px))] rounded-admin-card bg-admin-card p-6 text-admin-ink shadow-admin-hover backdrop:bg-admin-ink/40"
+      aria-labelledby={titleId}
+      className="admin-motion-dialog m-auto w-[min(420px,calc(100vw-32px))] rounded-admin-card bg-admin-card p-6 text-admin-ink shadow-admin-hover backdrop:bg-admin-ink/40"
     >
-      <h2 id="confirm-title" className="font-sans text-[17px] font-bold">
+      <h2 id={titleId} className="font-sans text-[17px] font-bold">
         {title}
       </h2>
       {text ? <p className="mt-2 text-sm leading-normal text-admin-muted">{text}</p> : null}

@@ -17,7 +17,7 @@ import {
   type ProductDetail,
 } from "./api";
 import { formatPhone } from "./format";
-import { availabilityOf } from "./product-form";
+import { availabilityOf } from "./product-availability";
 import { absoluteUrl, SITE_NAME, SITE_URL } from "./seo";
 
 type Thing = Record<string, unknown>;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Forum, Manrope } from "next/font/google";
+import localFont from "next/font/local";
+import { LOGO_PATH } from "@/components/logo-path";
 import { CartProvider } from "@/components/cart-context";
 import { RevealReady } from "@/components/motion/reveal-ready";
 import { REVEAL_BOOT_SCRIPT } from "@/lib/reveal-boot";
@@ -14,15 +15,20 @@ import "./globals.css";
   Переменные --font-forum и --font-manrope подхватывает @theme в globals.css
   (--font-display и --font-sans); одноимённые переменные тут дали бы цикл.
 */
-const forum = Forum({
+const forum = localFont({
+  src: "../assets/fonts/forum.woff2",
   weight: "400",
-  subsets: ["latin", "cyrillic"],
+  adjustFontFallback: false,
+  fallback: ["Forum Extended", "Forum Fallback"],
   display: "swap",
   variable: "--font-forum",
 });
 
-const manrope = Manrope({
-  subsets: ["latin", "cyrillic"],
+const manrope = localFont({
+  src: "../assets/fonts/manrope.woff2",
+  weight: "200 800",
+  adjustFontFallback: false,
+  fallback: ["Manrope Extended", "Manrope Fallback"],
   display: "swap",
   variable: "--font-manrope",
 });
@@ -63,6 +69,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: REVEAL_BOOT_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-canvas text-ink antialiased">
+        {/* Один контур для всех логотипов; скрытая библиотека не занимает места. */}
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          className="pointer-events-none absolute size-0 overflow-hidden"
+        >
+          <defs>
+            <path id="site-logo-path" fillRule="evenodd" d={LOGO_PATH} />
+          </defs>
+        </svg>
         <RevealReady />
         <CartProvider>{children}</CartProvider>
       </body>

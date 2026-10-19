@@ -94,9 +94,10 @@ export function RevealText({
     if (!element) return;
     let current = "";
     let cancelled = false;
+    let nearViewport = false;
     let frame = 0;
     const split = () => {
-      if (cancelled || element.offsetParent === null) return;
+      if (cancelled || !nearViewport || element.offsetParent === null) return;
       const next = measureLines(element, text);
       const key = next.join("\n");
       if (key === current) return;
@@ -108,10 +109,19 @@ export function RevealText({
       frame = requestAnimationFrame(split);
     };
     const observer = new ResizeObserver(schedule);
+    // Далёкие заголовки остаются обычным SSR-текстом. Клоны для измерения
+    // строк не заставляют пересчитывать всю страницу во время её гидрации.
+    const viewport = new IntersectionObserver(
+      ([entry]) => {
+        nearViewport = Boolean(entry?.isIntersecting);
+        if (nearViewport) schedule();
+      },
+      { rootMargin: "320px 0px" },
+    );
     // Наблюдение — только после шрифтов: строки по запасному шрифту были бы неверны
     document.fonts.ready.then(() => {
       if (cancelled) return;
-      split();
+      viewport.observe(element);
       observer.observe(element);
       if (element.parentElement) observer.observe(element.parentElement);
       window.addEventListener("resize", schedule);
@@ -120,6 +130,7 @@ export function RevealText({
       cancelled = true;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      viewport.disconnect();
       window.removeEventListener("resize", schedule);
     };
   }, [text]);

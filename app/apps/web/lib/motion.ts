@@ -6,7 +6,7 @@
  *   при `html.js` и `prefers-reduced-motion: no-preference`. Без JS и при reduce
  *   контент виден сразу, а класс `js` ставит скрипт в <head> до первой отрисовки —
  *   поэтому нет вспышки текста до скрытия;
- * - JS ждёт, пока элемент войдёт в экран (`inView` из Motion, это IntersectionObserver —
+ * - JS ждёт, пока элемент войдёт в экран (IntersectionObserver —
  *   он видит и прокрутку Lenis), проигрывает анимацию один раз и ставит `data-shown`:
  *   после этого CSS элемент больше не скрывает, даже если React перерисует его содержимое;
  * - при возврате назад/вперёд по истории скрипт в <head> на 1,5 с ставит
@@ -14,10 +14,9 @@
  *   без повторного проигрывания на глазах у пользователя.
  */
 
-// animate — из motion/mini: только WAAPI, без JS-движка пружин. Нам хватает: анимируем
-// лишь transform, opacity и clip-path, а полный animate прибавлял к главной ~26 kB
-import { inView, type AnimationPlaybackControls, type DOMKeyframesDefinition } from "motion";
-import { animate } from "motion/mini";
+// Появления используют браузерные WAAPI и IntersectionObserver: движок Motion
+// остаётся только у интерактивных меню и галереи, которые загружаются отдельно.
+type RevealAnimation = { finished: Promise<unknown> };
 
 /** Кривая — токен --ease-out-soft из globals.css. */
 export const EASE = [0.2, 0, 0, 1] as const;
@@ -87,7 +86,7 @@ function flushReveals() {
  */
 export function onReveal(
   element: Element,
-  play: (element: HTMLElement, firstScreen: boolean) => AnimationPlaybackControls[],
+  play: (element: HTMLElement, firstScreen: boolean) => RevealAnimation[],
   observe: Element = element,
 ): () => void {
   const el = element as HTMLElement;
@@ -107,17 +106,20 @@ export function onReveal(
         return;
       }
       el.setAttribute("data-pending", "");
-      unobserve = inView(
-        observe,
-        () => {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry?.isIntersecting) return;
+          observer.disconnect();
           if (shouldSkip()) {
             show();
             return;
           }
-          Promise.all(play(el, false).map((a) => a.finished)).finally(show);
+          void Promise.all(play(el, false).map((animation) => animation.finished)).finally(show);
         },
-        MOTION.viewport,
+        { rootMargin: MOTION.viewport.margin },
       );
+      observer.observe(observe);
+      unobserve = () => observer.disconnect();
     },
   };
   revealJobs.add(job);
@@ -135,11 +137,36 @@ export function onReveal(
 /** Анимация одного элемента с общей кривой. */
 export function tween(
   target: Element | Element[],
-  keyframes: DOMKeyframesDefinition,
+  keyframes: PropertyIndexedKeyframes,
   duration: number,
   delay = 0,
-): AnimationPlaybackControls {
-  return animate(target, keyframes, { duration, delay, ease: EASE });
+): RevealAnimation {
+  const elements = Array.isArray(target) ? target : [target];
+  const finished = elements.map((element) => {
+    const animation = element.animate(keyframes, {
+      duration: duration * 1000,
+      delay: delay * 1000,
+      easing: `cubic-bezier(${EASE.join(",")})`,
+      fill: "both",
+    });
+    return animation.finished
+      .then(() => {
+        // Сохраняем конечные стили и освобождаем анимацию, чтобы не накапливать
+        // удерживаемые слои при долгой прокрутке и переходах между страницами.
+        for (const [property, values] of Object.entries(keyframes)) {
+          if (["offset", "easing", "composite"].includes(property) || values == null) continue;
+          const value = Array.isArray(values) ? values.at(-1) : values;
+          if (value == null) continue;
+          (element as HTMLElement).style.setProperty(
+            property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+            String(value),
+          );
+        }
+        animation.cancel();
+      })
+      .catch(() => {});
+  });
+  return { finished: Promise.all(finished) };
 }
 
 /** Задержка n-го элемента лесенки: после `max` все идут одновременно. */

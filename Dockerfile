@@ -79,4 +79,6 @@ RUN useradd --create-home --uid 1001 app \
 USER app
 
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD curl --fail --silent http://127.0.0.1:8080/healthz || exit 1
 CMD ["/srv/deploy/entrypoint.sh"]
