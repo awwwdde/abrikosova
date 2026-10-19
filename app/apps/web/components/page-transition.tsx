@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useLenis } from "@/components/lenis-provider";
 import {
   createContext,
   useCallback,
@@ -37,6 +38,7 @@ function pageDestination(href: ComponentProps<typeof Link>["href"]): string | nu
 export function PageTransitions({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const lenis = useLenis();
   const previous = useRef(pathname);
   const navigation = useRef(0);
   const pending = useRef<{
@@ -45,6 +47,15 @@ export function PageTransitions({ children }: { children: ReactNode }) {
     timer: ReturnType<typeof setTimeout>;
   } | null>(null);
   const entry = useRef<Animation | null>(null);
+
+  const stopInertia = useCallback(() => {
+    if (!lenis) return;
+    const wasStopped = lenis.isStopped;
+    lenis.stop();
+    lenis.resize();
+    // Открытое меню сохраняет свою блокировку; позицию задаёт навигация Next.
+    if (!wasStopped) lenis.start();
+  }, [lenis]);
 
   const cancel = useCallback(() => {
     const active = pending.current;
@@ -60,6 +71,10 @@ export function PageTransitions({ children }: { children: ReactNode }) {
     (href, options) => {
       const version = ++navigation.current;
       cancel();
+      const destination = new URL(href, window.location.href);
+      // Инерция старой страницы не должна продолжаться после сброса scroll в Next.
+      // Остановка не меняет текущую позицию старого снимка.
+      if (destination.pathname !== window.location.pathname) stopInertia();
       const push = () =>
         options.replace ? router.replace(href, options) : router.push(href, options);
       // Меню уже плавно закрывается поверх нового экрана: второй снимок меню
@@ -67,7 +82,7 @@ export function PageTransitions({ children }: { children: ReactNode }) {
       if (
         !document.startViewTransition ||
         // Параметры фильтра, якорь и окно заявки не заменяют саму страницу.
-        new URL(href, window.location.href).pathname === window.location.pathname ||
+        destination.pathname === window.location.pathname ||
         window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
         document.querySelector('#mobile-menu[role="dialog"], [id^="mega-"]')
       ) {
@@ -103,12 +118,15 @@ export function PageTransitions({ children }: { children: ReactNode }) {
           delete document.documentElement.dataset.pageTransition;
         });
     },
-    [cancel, router],
+    [cancel, router, stopInertia],
   );
 
   useLayoutEffect(() => {
     if (previous.current === pathname) return;
     previous.current = pathname;
+    // В том числе для router.push вне TransitionLink: принимаем позицию Next
+    // (верх, якорь или сохранённую в истории), обнуляя прежнюю скорость Lenis.
+    stopInertia();
     const active = pending.current;
     if (active) {
       // Next восстанавливает прокрутку в layout-фазе. Снимок нового экрана —
@@ -126,7 +144,7 @@ export function PageTransitions({ children }: { children: ReactNode }) {
         duration: 280,
         easing: "cubic-bezier(0.2, 0, 0, 1)",
       }) ?? null;
-  }, [pathname]);
+  }, [pathname, stopInertia]);
 
   useEffect(() => {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -138,6 +156,7 @@ export function PageTransitions({ children }: { children: ReactNode }) {
     const onHistory = () => {
       navigation.current++;
       cancel();
+      stopInertia();
     };
     preference.addEventListener("change", stop);
     // Быстрый возврат по истории отменяет предыдущий снимок, но не навигацию.
@@ -148,7 +167,7 @@ export function PageTransitions({ children }: { children: ReactNode }) {
       onHistory();
       entry.current?.cancel();
     };
-  }, [cancel]);
+  }, [cancel, stopInertia]);
 
   return <NavigationContext.Provider value={navigate}>{children}</NavigationContext.Provider>;
 }
