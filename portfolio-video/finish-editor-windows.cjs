@@ -1,7 +1,0 @@
-const fs=require('fs'),path=require('path');const wb='C:/Users/Inv/.codex/skills/video-shotcraft/workbench';
-const gen=path.join(wb,'scripts/gen-index.mjs');let g=fs.readFileSync(gen,'utf8');g=g.replace('relative(demosDir, p).replace','relative(demosDir, p).split(String.fromCharCode(92)).join("/").replace');fs.writeFileSync(gen,g);
-const vite=path.join(wb,'vite.config.ts');let v=fs.readFileSync(vite,'utf8');
-v=v.replace('"rsync",\n              ["-aL", "--delete", "--exclude=cardpreviews", "public/", `${renderPublic}/`]','process.execPath,\n              ["-e", "require(\'fs\').cpSync(\'public\',\'.render-public\',{recursive:true,dereference:true,filter:p=>!p.includes(\'cardpreviews\')})"]');
-v=v.replace('const bin = path.join(root, "node_modules", ".bin", "remotion");','const bin = process.execPath;');v=v.replace('[\n                  "render",','[\n                  path.join(root, "node_modules", "@remotion", "cli", "remotion-cli.js"),\n                  "render",');v=v.replace('{ cwd: root }','{ cwd: root, windowsHide:true }');fs.writeFileSync(vite,v);
-const config=path.join(wb,'remotion.config.ts');let c=fs.readFileSync(config,'utf8');if(!c.includes('setBrowserExecutable'))c+='\nConfig.setBrowserExecutable("C:/Program Files/Google/Chrome/Application/chrome.exe");\nConfig.setChromeMode("chrome-for-testing");\nConfig.setConcurrency(1);\n';fs.writeFileSync(config,c);
-console.log('Windows paths and editor export fixed');
