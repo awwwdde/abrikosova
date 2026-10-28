@@ -76,3 +76,8 @@ blob-report/
 *.sqlite3
 /media/
 /backups/
+
+/portfolio-video/
+/tg-posts/
+
+old/
