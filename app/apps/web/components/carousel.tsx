@@ -43,17 +43,19 @@ export function useCarousel() {
     const track = trackRef.current;
     if (!track) return;
     // Допуск в 2px: дробные ширины дают остаток при прокрутке до конца
-    setEdges({
-      start: track.scrollLeft <= 2,
-      end: track.scrollLeft + track.clientWidth >= track.scrollWidth - 2,
-    });
+    const start = track.scrollLeft <= 2;
+    const end = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+    setEdges((previous) =>
+      previous.start === start && previous.end === end ? previous : { start, end },
+    );
   }, []);
 
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
-    update();
     track.addEventListener("scroll", update, { passive: true });
+    // Первый замер — после layout, когда ResizeObserver сам сообщит размер.
+    // Синхронный update при гидрации заставлял браузер пересчитывать всю страницу.
     const observer = new ResizeObserver(update);
     observer.observe(track);
     return () => {

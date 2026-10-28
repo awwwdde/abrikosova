@@ -1,0 +1,13 @@
+const fs=require('fs');const p='src/Film.tsx';let s=fs.readFileSync(p,'utf8');
+s=s.replaceAll('abrikosova.awwwdde.art','www.abrikosova-elena.ru');
+s=s.replace("const fade=1-ramp(f,duration-8,8);","const fade=1;");
+s=s.replace("fontSize:vertical?31:32,marginTop:36","fontSize:vertical?38:40,marginTop:36");
+s=s.replace('Сразу со вкусом.','Со вкусом.');
+const old="export const Film:React.FC<{bgm?:boolean}>=({bgm=true})=><AbsoluteFill style={{background:C.cream}}>{SHOTS.map(s=><Sequence key={s.id} from={s.from} durationInFrames={s.duration}><Scene {...s}/></Sequence>)}<AudioBed bgm={bgm}/></AbsoluteFill>;";
+const next=`export const CLIPS=SHOTS.map((s,i)=>({...s,from:Math.max(0,s.from-12),duration:s.duration+(i===0?0:12)}));
+export const ShotUnit:React.FC<React.ComponentProps<typeof Scene>>=(props)=>{const f=useCurrentFrame();return <AbsoluteFill style={{opacity:props.id==='hook'?1:ramp(f,0,12)}}><Scene {...props}/></AbsoluteFill>;};
+export const Film:React.FC<{bgm?:boolean}>=({bgm=true})=><AbsoluteFill style={{background:C.cream}}>{CLIPS.map(s=><Sequence key={s.id} from={s.from} durationInFrames={s.duration}><ShotUnit {...s}/></Sequence>)}<AudioBed bgm={bgm}/></AbsoluteFill>;`;
+if(!s.includes(old))throw new Error('Film anchor not found');s=s.replace(old,next);fs.writeFileSync(p,s);
+const wp='src/workbench.ts';let w=fs.readFileSync(wp,'utf8').replace('Film,Scene,SHOTS','Film,ShotUnit,CLIPS').replace('shots:SHOTS.map','shots:CLIPS.map').replace('component:Scene','component:ShotUnit');fs.writeFileSync(wp,w);
+let pkg=JSON.parse(fs.readFileSync('package.json'));pkg.name='abrikosova-portfolio-film';pkg.scripts={dev:'remotion studio src/index.tsx',render:'node render.cjs',qa:'node qa.cjs',typecheck:'tsc --noEmit'};fs.writeFileSync('package.json',JSON.stringify(pkg,null,2));
+fs.appendFileSync('DESIGN.md','\n\nУточнение пользователя: весь контент снимается со staging, а видимый адрес в кадре и ссылках — https://www.abrikosova-elena.ru. На основной домен пока ничего не загружаем. Межсценовый переход — 12 кадров мягкого cross-dissolve с наложением; без белого мигания. Музыка — Cat Walk (Arulo), тёплый ритмичный fashion house, громкость 0.25 с плавным входом и затуханием. Выбор соответствует редакционной эстетике кейса.\n');

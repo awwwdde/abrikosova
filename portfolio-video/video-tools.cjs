@@ -1,0 +1,1 @@
+const fs=require('fs'),path=require('path');const dir=path.resolve('.tool-deps/imageio_ffmpeg/binaries');const file=fs.existsSync(dir)&&fs.readdirSync(dir).find(x=>x.endsWith('.exe'));module.exports={ffmpeg:file?path.join(dir,file):path.resolve('node_modules/@remotion/compositor-win32-x64-msvc/ffmpeg.exe')};

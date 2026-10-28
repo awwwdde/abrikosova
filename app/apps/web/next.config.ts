@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 /**
  * Изображения.
@@ -29,6 +30,23 @@ const remotePatterns = mediaUrl.startsWith("http")
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // CSS приходит с HTML: первый экран не ждёт двух блокирующих запросов.
+  // В Next 15 эта настройка действует только на production-сборку.
+  experimental: { inlineCss: true },
+  webpack(config, { isServer, webpack }) {
+    if (!isServer) {
+      // Next 15 включает полифилы старых браузеров даже при modern browserslist.
+      // Tailwind 4 уже требует Chrome 111+, Firefox 128+ и Safari 16.4+.
+      // Оставляем только URL.canParse, которого нет в Safari 16.4 / Chrome 111.
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /[\\/]build[\\/]polyfills[\\/]polyfill-module(?:\.js)?$/,
+          path.resolve(__dirname, "lib/browser-polyfills.ts"),
+        ),
+      );
+    }
+    return config;
+  },
   // Слэш в конце убирает middleware вместе с переносом адресов старого сайта
   // (задание 012): встроенный 308 Next срабатывал раньше middleware, и
   // /catalog/7/ давал цепочку 308 → /catalog/7 → 301 → /catalog/torty/bento
@@ -43,7 +61,8 @@ const nextConfig: NextConfig = {
   // Шрифты картинок next/og (lib/og.tsx) читаются через fs — без явного включения
   // трассировка standalone их не видит и на проде OG-картинки падали бы
   outputFileTracingIncludes: { "/**": ["./assets/og-fonts/**"] },
-  images: { remotePatterns },
+  // AVIF уменьшает вес фотографий; браузеры без его поддержки получают WebP.
+  images: { remotePatterns, formats: ["image/avif", "image/webp"] },
   async rewrites() {
     if (!mediaInternalUrl) return [];
     return [{ source: "/media/:path*", destination: `${mediaInternalUrl}/:path*` }];

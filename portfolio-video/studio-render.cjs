@@ -1,0 +1,10 @@
+const {bundle}=require('@remotion/bundler');
+const {openBrowser,selectComposition,renderMedia,renderStill}=require('@remotion/renderer');
+const path=require('path'),fs=require('fs');
+(async()=>{const root='out/studio-v2';fs.mkdirSync(root+'/qa',{recursive:true});fs.mkdirSync(root+'/final',{recursive:true});const serveUrl=await bundle({entryPoint:path.resolve('src/studio-index.tsx')});const browser=await openBrowser('chrome',{browserExecutable:'C:/Program Files/Google/Chrome/Application/chrome.exe',chromeMode:'chrome-for-testing',chromiumOptions:{gl:'angle'}});try{
+const qa=process.argv.includes('--qa'),prototype=process.argv.includes('--prototype'),audio=process.argv.includes('--audio');
+const ids=audio?['StudioAudio']:prototype?['StudioReels']:['StudioReels','StudioWide'];
+for(const id of ids){const composition=await selectComposition({serveUrl,id,puppeteerInstance:browser});
+if(qa){for(const frame of [45,115,158,213,278,330,400,500,550,625,670,735,840]){await renderStill({serveUrl,composition,frame,output:`${root}/qa/${id}-${frame}.png`,puppeteerInstance:browser,logLevel:'error'});console.log('STILL',id,frame);}if(!prototype)continue;}
+for(const bgm of audio?[true,false]:[true]){const file=audio?`audio-${bgm?'music':'sfx'}.wav`:prototype?'prototype-reels.mp4':id==='StudioReels'?'reels-1080x1920.mp4':'telegram-1920x1080.mp4';let prev=-1;console.log('START',file);await renderMedia({serveUrl,composition,inputProps:{bgm},puppeteerInstance:browser,outputLocation:`${root}/final/${file}`,codec:audio?'wav':'h264',...(audio?{}:{crf:18,pixelFormat:'yuv420p',audioCodec:'aac',audioBitrate:'192k'}),audioSampleRate:48000,concurrency:1,timeoutInMilliseconds:120000,imageFormat:'jpeg',jpegQuality:96,...(prototype?{frameRange:[83,359]}:{}),overwrite:true,logLevel:'error',onProgress:p=>{const n=Math.floor(p.progress*10);if(n!==prev){prev=n;console.log(file,n*10+'%');}}});console.log('DONE',file);}
+}}finally{await browser.close({silent:true});}})().catch(e=>{console.error(e);process.exitCode=1});

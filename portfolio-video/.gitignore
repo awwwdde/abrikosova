@@ -1,0 +1,10 @@
+node_modules/
+.npm-cache/
+.remotion/
+.cache/
+.tool-deps/
+out/
+public/textures/
+public/audio/
+public/hero.mp4
+

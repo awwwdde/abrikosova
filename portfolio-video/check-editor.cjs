@@ -1,0 +1,2 @@
+const {chromium}=require('../app/e2e/node_modules/playwright');
+(async()=>{const b=await chromium.launch({channel:'chrome',headless:true});const p=await b.newPage({viewport:{width:1440,height:1000}});const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.goto('http://localhost:5198/?import=project',{waitUntil:'domcontentloaded'});await p.waitForTimeout(4000);console.log('ERRORS',JSON.stringify(errs));console.log((await p.locator('body').innerText()).slice(0,1600));await p.screenshot({path:'out/qa/editor.png'});await b.close()})();

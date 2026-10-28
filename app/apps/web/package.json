@@ -2,6 +2,13 @@
   "name": "@abrikosova/web",
   "version": "0.1.0",
   "private": true,
+  "browserslist": [
+    "Chrome >= 111",
+    "Edge >= 111",
+    "Firefox >= 128",
+    "Safari >= 16.4",
+    "ios_saf >= 16.4"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
