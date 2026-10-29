@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Образ для платформы-хостинга с под-сайтами `<slug>.awwwdde.art` (контракт гостя —
 # app/deploy/README.md). Один контейнер: снаружи — только порт 8080 и /healthz,
 # внутри — nginx (8080), Next.js (127.0.0.1:3000), FastAPI (127.0.0.1:8000) и Redis
@@ -14,7 +13,7 @@
 FROM node:22-slim AS web-build
 WORKDIR /srv
 COPY app/apps/web/package.json app/apps/web/package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN npm ci
 COPY app/apps/web/ ./
 # Адреса внутри контейнера постоянные — их можно вшить при сборке. Адрес сайта
 # (PUBLIC_SITE_URL) и всё, что зависит от стенда, читается при запуске
@@ -51,12 +50,10 @@ ENV PYTHONUNBUFFERED=1 \
 # nginx — единый вход на 8080; redis-server — лимиты запросов и кэш настроек;
 # ffmpeg — проверка и подготовка загруженного видео;
 # postgresql-client — pg_dump/pg_restore для резервных копий из админки
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    rm -f /etc/apt/apt.conf.d/docker-clean \
-    && apt-get update -qq \
+RUN apt-get update -qq \
     && apt-get install -qq -y --no-install-recommends \
-        curl nginx redis-server ffmpeg postgresql-client libstdc++6
+        curl nginx redis-server ffmpeg postgresql-client libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
 # Next standalone нужен только сам node
 COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=pg-tools /usr/lib/postgresql/16/bin/pg_dump /usr/local/bin/pg_dump
@@ -66,8 +63,7 @@ RUN pg_dump --version && pg_restore --version && psql --version
 
 WORKDIR /srv/api
 COPY app/apps/api/pyproject.toml ./
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && pip install .
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 COPY app/apps/api/ ./
 
 COPY --from=web-build /srv/.next/standalone /srv/web
