@@ -160,8 +160,14 @@ async def _delete_files(keys: list[str]) -> None:
     """Удаляет фото записи из хранилища. Заглушки сида (`placeholder/…`) файлов
     не имеют — их не трогаем. Ошибка хранилища не роняет запрос (см. storage)."""
     for key in keys:
-        if not key.startswith("placeholder/"):
-            await storage.delete_image(key)
+        if key.startswith("placeholder/"):
+            continue
+        # Общая очистка предназначена только для публичного контента. Резервные
+        # копии и фото заявок удаляются отдельными маршрутами с проверкой роли.
+        if key.split("/", 1)[0] not in storage.PUBLIC_PREFIXES:
+            logger.error("Пропущено удаление файла вне публичного каталога")
+            continue
+        await storage.delete_image(key)
 
 
 async def _ensure_no_products(session: AsyncSession, condition: Any, where: str) -> None:
@@ -1401,6 +1407,16 @@ async def update_order_status(
     request: Request,
 ):
     order = await _get_or_404(session, Order, order_id)
+    if (
+        order.customer_name == retention.ANONYMIZED_NAME
+        and order.status is OrderStatus.CANCELLED
+        and data.status is OrderStatus.CANCELLED
+        and (data.reason or "").strip()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Нельзя добавлять текст к обезличенному заказу",
+        )
     try:
         admin_orders.check_transition(order.status, data.status)
     except admin_orders.TransitionError as error:
@@ -1516,7 +1532,9 @@ async def create_user(data: AdminCreate, admin: OwnerOnly, session: SessionDep, 
 async def update_user(
     user_id: int, data: AdminUpdate, admin: OwnerOnly, session: SessionDep, request: Request
 ):
-    user = await _get_or_404(session, AdminUser, user_id)
+    user = await sessions.lock_admin_user(session, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 
     # Владелец не должен случайно разжаловать или отключить сам себя и потерять доступ
     if user.id == admin.id and (data.role is not None or data.is_active is False):

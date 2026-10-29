@@ -187,7 +187,38 @@ async def login(
             return _locked_response(lock)
         raise INVALID_CREDENTIALS
 
+    verified_hash = admin.password_hash
     await login_guard.reset(key)
+    # Password resets take the same row lock before revoking sessions. If a reset
+    # committed while login awaited Redis, re-check against the refreshed hash.
+    admin = await sessions.lock_admin_user(session, admin.id)
+    if (
+        admin is None
+        or not admin.is_active
+        or (
+            admin.password_hash != verified_hash
+            and not verify_password(data.password, admin.password_hash)
+        )
+    ):
+        lock = await login_guard.register_failure(key)
+        await audit.record_auth(
+            session,
+            request,
+            action="login_locked" if lock else "login_failed",
+            admin=admin,
+            email_hash=key,
+        )
+        await session.commit()
+        logger.warning("Неудачная попытка входа: ip=%s", ip)
+        if lock is not None:
+            lines = [f"Адрес: {admin.email}" if admin else "Адрес: не зарегистрирован"]
+            lines += [f"IP: {ip}", f"Вход закрыт на {lock.retry_after // 60} мин."]
+            background.add_task(
+                telegram.notify_admin_security, "блокировка входа после 5 неудач", lines
+            )
+            return _locked_response(lock)
+        raise INVALID_CREDENTIALS
+
     if needs_rehash(admin.password_hash):
         admin.password_hash = hash_password(data.password)
 
@@ -352,6 +383,9 @@ async def change_password(
     session: SessionDep,
 ) -> None:
     """Смена своего пароля. Остальные сессии отзываются, текущая остаётся."""
+    admin = await sessions.lock_admin_user(session, admin.id)
+    if admin is None or not admin.is_active:
+        raise LOGIN_REQUIRED
     if not verify_password(data.current_password, admin.password_hash):
         raise RequestValidationError(
             [

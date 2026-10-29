@@ -41,9 +41,14 @@ function PageHits() {
   const pathname = usePathname();
   const search = useSearchParams().toString();
   useEffect(() => {
-    ym("hit", `${window.location.origin}${pathname}${search ? `?${search}` : ""}`, {
+    const safeSearch = new URLSearchParams(search);
+    safeSearch.delete("t");
+    const safeReferrer = document.referrer ? new URL(document.referrer) : null;
+    safeReferrer?.searchParams.delete("t");
+    const query = safeSearch.toString();
+    ym("hit", `${window.location.origin}${pathname}${query ? `?${query}` : ""}`, {
       title: document.title,
-      referer: document.referrer,
+      referer: safeReferrer?.toString() ?? "",
     });
   }, [pathname, search]);
   return null;

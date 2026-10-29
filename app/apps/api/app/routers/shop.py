@@ -498,6 +498,11 @@ async def add_cart_item(
         raise HTTPException(
             status_code=422, detail="К этому товару надпись на табличке не делаем"
         ) from None
+    except cart_service.CartFullError:
+        raise HTTPException(
+            status_code=http_status.HTTP_409_CONFLICT,
+            detail=f"В корзине не может быть больше {cart_service.MAX_CART_LINES} разных позиций",
+        ) from None
     return await _cart_response(session, response, cart)
 
 

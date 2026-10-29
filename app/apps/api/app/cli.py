@@ -46,7 +46,12 @@ async def reset_password(email: str) -> int:
             print(f"Сотрудник {email} не найден", file=sys.stderr)
             return 1
 
-        admin.password_hash = hash_password(_ask_password(email))
+        password_hash = hash_password(_ask_password(email))
+        admin = await sessions.lock_admin_user(db, admin.id)
+        if admin is None:
+            print(f"Сотрудник {email} не найден", file=sys.stderr)
+            return 1
+        admin.password_hash = password_hash
         revoked = await sessions.revoke_all(db, admin.id)
         db.add(
             AuditLogEntry(

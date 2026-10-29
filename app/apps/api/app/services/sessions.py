@@ -110,6 +110,16 @@ async def _forget(*session_ids: uuid.UUID) -> None:
         await get_redis().delete(*(f"{_ALIVE_PREFIX}{sid}" for sid in session_ids))
 
 
+async def lock_admin_user(db: AsyncSession, admin_id: int) -> AdminUser | None:
+    """Serialize credential changes and successful login session creation per user."""
+    return await db.scalar(
+        select(AdminUser)
+        .where(AdminUser.id == admin_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+
 async def revoke(db: AsyncSession, session: AdminSession) -> None:
     if session.revoked_at is None:
         session.revoked_at = clock.utc_now()

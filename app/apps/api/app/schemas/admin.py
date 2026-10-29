@@ -325,6 +325,13 @@ class CustomCakeImageIn(BaseModel):
     storage_key: Annotated[str, Field(min_length=1, max_length=500)]
     role: CakeImageRole | None = None
 
+    @field_validator("storage_key")
+    @classmethod
+    def _custom_cake_storage_key(cls, value: str) -> str:
+        if not value.startswith(("custom-cakes/", "placeholder/custom-cakes/")):
+            raise ValueError("Фото должно находиться в каталоге custom-cakes")
+        return value
+
 
 class CustomCakeIn(BaseModel):
     """Дизайн торта на заказ (008a). Цены «от» здесь нет — её считает сервер
@@ -398,6 +405,13 @@ class GalleryItemIn(BaseModel):
         # Хранится месяц, а не день: приводим к первому числу, чтобы «12 мая»
         # и «30 мая» не выглядели разными месяцами при сортировке и выводе
         return value.replace(day=1) if value else None
+
+    @field_validator("image_key", "detail_image_key")
+    @classmethod
+    def _gallery_storage_key(cls, value: str | None) -> str | None:
+        if value is not None and not value.startswith(("gallery/", "placeholder/gallery/")):
+            raise ValueError("Фото должно находиться в каталоге gallery")
+        return value
 
 
 class GalleryItemAdminOut(GalleryItemIn):

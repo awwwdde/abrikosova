@@ -190,7 +190,13 @@ def deliver(to: str, subject: str, text: str, html: str, *, label: str) -> None:
             if settings.smtp_user and settings.smtp_password:
                 smtp.login(settings.smtp_user, settings.smtp_password)
             smtp.send_message(message)
-    except (smtplib.SMTPException, OSError):
-        logger.exception("%s для %s не отправлена", label, masked)
+    except (smtplib.SMTPException, OSError) as error:
+        # Exception text/tracebacks can contain SMTP recipient addresses.
+        logger.warning(
+            "%s для %s не отправлена (тип ошибки: %s)",
+            label,
+            masked,
+            type(error).__name__,
+        )
         return
     logger.info("%s отправлена на %s", label, masked)

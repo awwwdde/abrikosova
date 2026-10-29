@@ -33,6 +33,7 @@ from app.services import delivery, slots
 from app.services.catalog import CAKES_CATEGORY_SLUG
 
 MAX_QUANTITY = 99
+MAX_CART_LINES = 50
 
 
 class InscriptionNotAllowedError(Exception):
@@ -41,6 +42,10 @@ class InscriptionNotAllowedError(Exception):
 
 class VariantNotFoundError(Exception):
     """Варианта нет, он выключен или его товар скрыт."""
+
+
+class CartFullError(Exception):
+    """В корзине достигнут предел разных строк."""
 
 
 def normalize_inscription(text: str | None) -> str | None:
@@ -264,6 +269,9 @@ async def add_item(
     if existing is not None:
         existing.quantity = min(existing.quantity + quantity, MAX_QUANTITY)
         return
+
+    if len(cart.items) >= MAX_CART_LINES:
+        raise CartFullError
 
     cart.items.append(
         CartItem(

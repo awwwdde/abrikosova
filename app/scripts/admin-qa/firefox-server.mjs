@@ -6,7 +6,7 @@
  * (next) и localhost:<API_HOST_PORT> (API; другой порт — через -e QA_PORTS=3000,8002). Пробрасываем эти порты на машину-хозяина, чтобы
  * адреса и cookie были те же, что в обычном браузере, и запускаем run-server.
  *
- *   docker run --rm -d -p 3100:3100 --name admin-qa-firefox \
+ *   docker run --rm -d -p 127.0.0.1:3100:3100 --name admin-qa-firefox \
  *     -v "$PWD:/qa" mcr.microsoft.com/playwright:v1.56.1-noble node /qa/firefox-server.mjs
  *   QA_FIREFOX_WS=ws://127.0.0.1:3100/ npm run qa
  * В Git Bash перед docker run — `export MSYS_NO_PATHCONV=1`, иначе /qa/… станет
