@@ -127,6 +127,11 @@ async function catalogExists(category: string, subcategory?: string): Promise<bo
   return subcategory ? subs.has(subcategory) : true;
 }
 
+function redirectBase(request: NextRequest): URL {
+  // В standalone Next собирает request.url из внутреннего hostname и порта.
+  return new URL(process.env.SITE_URL || process.env.PUBLIC_SITE_URL || request.url);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -140,11 +145,12 @@ export async function middleware(request: NextRequest) {
     }
     if (outcome?.status === 301) {
       // Параметры запроса сохраняем: метки рекламы и utm не должны теряться
-      const target = new URL(outcome.location, request.url);
+      const base = redirectBase(request);
+      const target = new URL(outcome.location, base);
       if (search && !target.search) target.search = search;
       // Только тот же сайт или наше хранилище картинок — открытого редиректа на
       // чужой домен не будет, даже если правила выше когда-нибудь ошибутся (012a)
-      if (target.origin === request.nextUrl.origin || target.origin === MEDIA_ORIGIN) {
+      if (target.origin === base.origin || target.origin === MEDIA_ORIGIN) {
         return NextResponse.redirect(target, 301);
       }
       console.warn("legacy: редирект на чужой origin отклонён", target.href);
@@ -153,7 +159,7 @@ export async function middleware(request: NextRequest) {
 
   // Оформление переехало в корзину (007b): старые закладки и ссылки — туда
   if (pathname === "/checkout") {
-    return NextResponse.redirect(new URL("/cart", request.url), 301);
+    return NextResponse.redirect(new URL("/cart", redirectBase(request)), 301);
   }
 
   const product = /^\/product\/([^/]+)$/.exec(pathname);

@@ -16,6 +16,7 @@ async function run(path: string) {
 }
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -58,6 +59,20 @@ describe("middleware: Location только своего сайта", () => {
       location: `${ORIGIN}/about?utm_source=ya`,
     });
     expect((await run("/create-consultation/")).status).toBe(410);
+  });
+
+  it.each([
+    ["/checkout", "/cart"],
+    ["/about/?utm_source=ya", "/about?utm_source=ya"],
+  ])("%s за прокси ведёт на публичный адрес", async (path, target) => {
+    vi.stubEnv("SITE_URL", "");
+    vi.stubEnv("PUBLIC_SITE_URL", ORIGIN);
+    const request = new NextRequest(`https://127.0.0.1:3000${path}`, {
+      headers: { "x-forwarded-host": "evil.example" },
+    });
+    const response = await middleware(request);
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(`${ORIGIN}${target}`);
   });
 
   it("API вернул чужой адрес — middleware не редиректит", async () => {
