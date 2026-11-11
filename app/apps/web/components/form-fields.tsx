@@ -78,6 +78,7 @@ export function Check({
   onBlur,
   error,
   className = "",
+  accentCheckmark = false,
   children,
 }: {
   id: string;
@@ -86,26 +87,64 @@ export function Check({
   onBlur?: () => void;
   error?: string;
   className?: string;
+  accentCheckmark?: boolean;
   children: ReactNode;
 }) {
+  const input = (
+    <input
+      id={id}
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      onBlur={onBlur}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? `${id}-error` : undefined}
+      className={
+        accentCheckmark
+          ? "peer absolute inset-0 m-0 size-full cursor-pointer opacity-0"
+          : [
+              "peer grid size-5 shrink-0 appearance-none place-content-center border bg-surface transition-colors duration-150",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+              "before:h-[5px] before:w-[9px] before:-translate-y-px before:-rotate-45 before:border-b-[1.5px] before:border-l-[1.5px] before:border-white before:opacity-0 checked:before:opacity-100",
+              checked ? "border-accent bg-accent" : error ? "border-accent" : "border-line-strong",
+            ].join(" ")
+      }
+    />
+  );
   return (
     <div className={className}>
       <label className="flex cursor-pointer items-center gap-3 text-[15px] leading-5 text-ink">
-        <input
-          id={id}
-          type="checkbox"
-          checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
-          onBlur={onBlur}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={[
-            "peer grid size-5 shrink-0 appearance-none place-content-center border bg-surface transition-colors duration-150",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-            "before:h-[5px] before:w-[9px] before:-translate-y-px before:-rotate-45 before:border-b-[1.5px] before:border-l-[1.5px] before:border-white before:opacity-0 checked:before:opacity-100",
-            checked ? "border-accent bg-accent" : error ? "border-accent" : "border-line-strong",
-          ].join(" ")}
-        />
+        {accentCheckmark ? (
+          <span className="relative size-5 shrink-0">
+            {input}
+            <span
+              aria-hidden="true"
+              className={[
+                "pointer-events-none grid size-full place-items-center border transition-colors duration-150",
+                "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent",
+                checked
+                  ? "border-accent bg-accent"
+                  : `bg-surface ${error ? "border-accent" : "border-line-strong"}`,
+              ].join(" ")}
+            >
+              {checked && (
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-3.5 text-white"
+                >
+                  <path d="m3.5 8 3 3 6-6" />
+                </svg>
+              )}
+            </span>
+          </span>
+        ) : (
+          input
+        )}
         <span>{children}</span>
       </label>
       {error ? (

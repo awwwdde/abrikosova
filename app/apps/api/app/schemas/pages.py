@@ -16,7 +16,7 @@
 from datetime import date
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, ValidationError
 
 from app.models.enums import GalleryOccasion, PageKey
 from app.schemas.common import HttpsUrl, SafeHref
@@ -282,18 +282,25 @@ class GalleryContent(ContentBlock):
     cta: GalleryCta | None = None
 
 
-class LegalContent(ContentBlock):
-    """Правовые документы (010b): «Редакция от …» под заголовком каждого.
+class LegalSection(ContentBlock):
+    """Заголовок и текст раздела документа."""
 
-    Тексты документов — в коде страниц: их правит юрист вместе с разработчиком,
-    а не редактор. Имя оператора ПДн — из реквизитов контактов (`legal.name`),
-    чтобы исправлять его в одном месте. Дата — то, что меняется при каждой
-    новой редакции, поэтому она здесь.
-    """
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=8000)]
+
+
+LegalSections = Annotated[list[LegalSection], Field(min_length=1, max_length=30)]
+
+
+class LegalContent(ContentBlock):
+    """Тексты и даты редакций. Старые записи могут содержать только даты."""
 
     privacy_revised_at: date | None = None
     terms_revised_at: date | None = None
     consent_revised_at: date | None = None
+    privacy_sections: LegalSections | None = None
+    terms_sections: LegalSections | None = None
+    consent_sections: LegalSections | None = None
 
 
 PAGE_CONTENT_SCHEMAS: dict[PageKey, type[ContentBlock]] = {

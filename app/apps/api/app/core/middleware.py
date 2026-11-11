@@ -100,9 +100,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         for header, value in SECURITY_HEADERS.items():
             response.headers.setdefault(header, value)
 
-        # Токены и данные сессий не должны оседать ни в кэше браузера, ни в прокси
-        # (задание 011a). Для любого ответа /auth/*, включая ошибки и 429
-        if request.url.path.startswith("/api/v1/auth"):
+        # Ответы авторизации и настройки почты не должны оседать в браузере и прокси.
+        if request.url.path.startswith(("/api/v1/auth", "/api/v1/admin/consultation-mailboxes")):
             response.headers["Cache-Control"] = "no-store"
 
         # HSTS имеет смысл только на HTTPS-проде; на localhost он сломал бы разработку

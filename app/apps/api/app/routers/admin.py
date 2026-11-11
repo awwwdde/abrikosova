@@ -9,6 +9,7 @@ import logging
 from datetime import date, timedelta
 from typing import Annotated, Any
 from urllib.parse import quote
+from uuid import uuid4
 
 from fastapi import (
     APIRouter,
@@ -196,7 +197,7 @@ def _goods(count: int) -> str:
 
 async def _get_or_404(session: AsyncSession, model: Any, item_id: int) -> Any:
     obj = await session.get(model, item_id)
-    if obj is None:
+    if obj is None or (model is Product and obj.is_archived):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Запись не найдена")
     return obj
 
@@ -229,7 +230,7 @@ async def dashboard(admin: CurrentAdmin, session: SessionDep) -> DashboardStats:
             ConsultationRequest, ConsultationRequest.status == ConsultationStatus.NEW
         ),
         consultations_week=await count(ConsultationRequest, ConsultationRequest.created_at >= week),
-        products_total=await count(Product),
+        products_total=await count(Product, Product.is_archived.is_(False)),
         reviews_unpublished=await count(Review, Review.is_published.is_(False)),
     )
 
@@ -359,11 +360,15 @@ async def delete_subcategory(
 VARIANT_SAFE_FIELDS = frozenset({"price", "is_active", "weight_grams", "label"})
 
 
-async def _load_product(session: AsyncSession, product_id: int) -> Product:
+async def _load_product(session: AsyncSession, product_id: int, *, lock: bool = False) -> Product:
     product = await session.get(
-        Product, product_id, options=[selectinload(Product.variants)], populate_existing=True
+        Product,
+        product_id,
+        options=[selectinload(Product.variants)],
+        populate_existing=True,
+        with_for_update=lock,
     )
-    if product is None:
+    if product is None or product.is_archived:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Запись не найдена")
     return product
 
@@ -480,7 +485,7 @@ async def update_product(
     request: Request,
     background: BackgroundTasks,
 ):
-    product = await _load_product(session, item_id)
+    product = await _load_product(session, item_id, lock=True)
     await _check_product_refs(session, data)
     old_slug = product.slug
     # В журнал — только реально изменённые поля, цены и наличие — «было → стало» (011c)
@@ -518,9 +523,18 @@ async def delete_product(
     request: Request,
     background: BackgroundTasks,
 ) -> None:
-    product = await _get_or_404(session, Product, item_id)
+    product = await _load_product(session, item_id, lock=True)
     slug = product.slug
-    await session.delete(product)
+    has_orders = await session.scalar(
+        select(OrderItem.id).where(OrderItem.product_id == item_id).limit(1)
+    )
+    if has_orders is None:
+        await session.delete(product)
+    else:
+        product.is_archived = True
+        product.is_active = False
+        # Освобождаем адрес для новой карточки; заказы ссылаются на числовой ID.
+        product.slug = f"deleted-{item_id}-{uuid4().hex}"
     await audit.record(
         session, request, admin, action="delete", entity="product", entity_id=item_id
     )
@@ -632,6 +646,7 @@ async def set_main_product_image(
 ):
     """Делает фото главным. Остальные сбрасываются на уровне сервиса,
     а не по данным от клиента."""
+    await _get_or_404(session, Product, product_id)
     image = await _get_or_404(session, ProductImage, image_id)
     if image.product_id != product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Фото не найдено")
@@ -655,6 +670,7 @@ async def set_product_image_role(
     background: BackgroundTasks,
 ):
     """Подпись фото на странице товара: «Целиком», «Срез», «Деталь», «Упаковка»."""
+    await _get_or_404(session, Product, product_id)
     image = await _get_or_404(session, ProductImage, image_id)
     if image.product_id != product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Фото не найдено")
@@ -675,6 +691,7 @@ async def delete_product_image(
     session: SessionDep,
     request: Request,
 ) -> None:
+    await _get_or_404(session, Product, product_id)
     image = await _get_or_404(session, ProductImage, image_id)
     if image.product_id != product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Фото не найдено")

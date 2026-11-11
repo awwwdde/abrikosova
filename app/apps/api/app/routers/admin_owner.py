@@ -5,9 +5,11 @@
 с IP и устройствами; менеджеру хватает ленты «Последние действия» на главной.
 """
 
+import smtplib
 from typing import Annotated, Literal
+from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,12 +18,61 @@ from app.core.deps import OwnerOnly
 from app.models import Product
 from app.schemas.common import Page
 from app.schemas.dashboard import ActivityItem
+from app.schemas.request_mail import RequestMailboxIn, RequestMailboxOut, RequestMailSettings
 from app.schemas.settings import BakerySettings
-from app.services import audit, bakery_settings, journal, revalidate
+from app.services import audit, bakery_settings, journal, request_mail, revalidate
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+
+@router.get("/consultation-mailboxes", response_model=RequestMailSettings)
+async def list_request_mailboxes(admin: OwnerOnly, session: SessionDep) -> RequestMailSettings:
+    return await request_mail.read(session)
+
+
+@router.post(
+    "/consultation-mailboxes", response_model=RequestMailboxOut, status_code=status.HTTP_201_CREATED
+)
+async def add_request_mailbox(
+    data: RequestMailboxIn, admin: OwnerOnly, session: SessionDep, request: Request
+) -> RequestMailboxOut:
+    try:
+        await request_mail.verify(data)
+    except smtplib.SMTPAuthenticationError:
+        raise HTTPException(
+            status_code=422, detail="Почта не приняла логин или пароль приложения"
+        ) from None
+    except smtplib.SMTPSenderRefused:
+        raise HTTPException(
+            status_code=422, detail="Почта не разрешила указанный адрес отправителя"
+        ) from None
+    except (smtplib.SMTPException, OSError, UnicodeError):
+        raise HTTPException(
+            status_code=422, detail="Не удалось подключиться к почте. Проверьте сервер и порт"
+        ) from None
+    try:
+        mailbox = await request_mail.add(session, data)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
+    await audit.record(
+        session, request, admin, action="update", entity="settings", entity_id=request_mail.KEY
+    )
+    await session.commit()
+    return mailbox
+
+
+@router.delete("/consultation-mailboxes/{mailbox_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_request_mailbox(
+    mailbox_id: UUID, admin: OwnerOnly, session: SessionDep, request: Request
+) -> None:
+    if not await request_mail.remove(session, mailbox_id):
+        raise HTTPException(status_code=404, detail="Адрес уже удалён")
+    await audit.record(
+        session, request, admin, action="update", entity="settings", entity_id=request_mail.KEY
+    )
+    await session.commit()
 
 
 @router.get("/journal", response_model=Page[ActivityItem])

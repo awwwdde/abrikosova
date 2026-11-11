@@ -123,7 +123,7 @@ class GalleryFacet(BaseModel):
 
 
 class LegalPageOut(PageContentOut):
-    """`GET /pages/legal`: даты редакции правовых документов (010b)."""
+    """`GET /pages/legal`: тексты и даты редакций документов."""
 
     content: LegalContent  # type: ignore[assignment]
 

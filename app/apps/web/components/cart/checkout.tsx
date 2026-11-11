@@ -520,6 +520,7 @@ export function Checkout({
             render={({ field }) => (
               <Check
                 id={fieldId("consent_pd")}
+                accentCheckmark
                 checked={field.value}
                 onChange={field.onChange}
                 onBlur={field.onBlur}

@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
 
 export type PageKey = "home" | "about" | "custom_cakes" | "contacts" | "legal" | "gallery";
 export type PageValue = Record<string, unknown>;
@@ -291,15 +292,42 @@ const optionalHttps = z
     "Ссылка должна начинаться с https://",
   );
 
-/** Даты редакции правовых документов (010b): ГГГГ-ММ-ДД из поля type="date". */
 const revisionDate = optional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Дата: ГГГГ-ММ-ДД"));
+const legalSections = optional(
+  z
+    .array(
+      z
+        .object({
+          title: line,
+          text: z
+            .string()
+            .trim()
+            .min(1, "Введите текст раздела")
+            .max(8000, "Не длиннее 8000 символов"),
+        })
+        .strict(),
+    )
+    .min(1, "Добавьте хотя бы один раздел")
+    .max(30, "Не больше 30 разделов"),
+);
 export const legalContentSchema = z
   .object({
     privacy_revised_at: revisionDate,
     terms_revised_at: revisionDate,
     consent_revised_at: revisionDate,
+    privacy_sections: legalSections,
+    terms_sections: legalSections,
+    consent_sections: legalSections,
   })
   .strict();
+
+export function withLegalDefaults(value: PageValue): PageValue {
+  const content = { ...(value.content as Record<string, unknown>) };
+  for (const [key, document] of Object.entries(LEGAL_DOCUMENTS)) {
+    content[`${key}_sections`] ??= document.sections;
+  }
+  return { ...value, content };
+}
 
 /** «Работы» (009): текст справа от заголовка и бордовая плашка «Не нашли похожий?». */
 export const galleryContentSchema = z

@@ -389,7 +389,7 @@ def _popular_query(first: date, last: date) -> Any:
         .join(Product, Product.id == OrderItem.product_id)
         .join(Category, Category.id == Product.category_id)
         .join(SubCategory, SubCategory.id == Product.subcategory_id)
-        .where(created_between(first, last), NOT_CANCELLED)
+        .where(created_between(first, last), NOT_CANCELLED, Product.is_archived.is_(False))
         .group_by(Product.id, Category.name, SubCategory.name)
         .order_by(sold.desc(), Product.name)
     )

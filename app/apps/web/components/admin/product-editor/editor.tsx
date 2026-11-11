@@ -17,7 +17,7 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CaretLeft, FloppyDisk } from "@phosphor-icons/react";
+import { CaretLeft, FloppyDisk, Trash } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -31,6 +31,7 @@ import {
   Card,
   CardHeader,
   ChipToggle,
+  ConfirmDialog,
   Field,
   Input,
   Notice,
@@ -159,6 +160,8 @@ function ProductForm({ loaded }: { loaded: Loaded }) {
   const [hidden, setHidden] = useState<HiddenFields>(product ? hiddenOf(product) : EMPTY_HIDDEN);
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     control,
@@ -173,7 +176,7 @@ function ProductForm({ loaded }: { loaded: Loaded }) {
     defaultValues: product ? toFormValues(product) : EMPTY_FORM,
     mode: "onTouched",
   });
-  const { dialog: leaveDialog } = useUnsavedGuard(isDirty && !isSubmitting);
+  const { dialog: leaveDialog } = useUnsavedGuard(isDirty && !isSubmitting && !deleting);
   const values = useWatch({ control }) as ProductFormValues;
 
   const category = loaded.categories.find((item) => String(item.id) === values.category_id);
@@ -214,6 +217,21 @@ function ProductForm({ loaded }: { loaded: Loaded }) {
       }
     }
   });
+
+  async function remove() {
+    if (!product || deleting) return;
+    setDeleting(true);
+    setFormError(null);
+    try {
+      await authFetch(`/admin/products/${product.id}`, { method: "DELETE" });
+      toast.success("Товар удалён");
+      router.replace("/admin/catalog");
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Не удалось удалить товар");
+      setConfirmDelete(false);
+      setDeleting(false);
+    }
+  }
 
   const leadDays = parseNumber(values.lead_time_days ?? "");
   const nearest =
@@ -309,9 +327,19 @@ function ProductForm({ loaded }: { loaded: Loaded }) {
           <span aria-live="polite" className="mr-1.5 text-[13px] text-admin-muted">
             {note}
           </span>
+          {product ? (
+            <Button
+              variant="danger"
+              disabled={isSubmitting || deleting}
+              icon={<Trash aria-hidden="true" size={17} />}
+              onClick={() => setConfirmDelete(true)}
+            >
+              Удалить товар
+            </Button>
+          ) : null}
           <Button
             variant="outline"
-            disabled={!isDirty || isSubmitting}
+            disabled={!isDirty || isSubmitting || deleting}
             onClick={() => {
               reset();
               setFormError(null);
@@ -321,7 +349,7 @@ function ProductForm({ loaded }: { loaded: Loaded }) {
           </Button>
           <Button
             type="submit"
-            disabled={!isDirty}
+            disabled={!isDirty || deleting}
             loading={isSubmitting}
             icon={<FloppyDisk aria-hidden="true" size={18} />}
           >
@@ -633,6 +661,15 @@ function ProductForm({ loaded }: { loaded: Loaded }) {
         </div>
       </div>
       {leaveDialog}
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Удалить товар?"
+        text={`«${product?.name ?? ""}» исчезнет из каталога. В оформленных заказах он сохранится.`}
+        confirmLabel="Удалить товар"
+        loading={deleting}
+        onConfirm={() => void remove()}
+        onClose={() => setConfirmDelete(false)}
+      />
     </form>
   );
 }

@@ -110,6 +110,29 @@ async def test_cart_reports_delivery_and_order_snapshots_it(
     )
 
 
+async def test_delete_ordered_product_keeps_order_items(client, catalog, admin_headers) -> None:
+    await _add(client, catalog.variants["gf-cookie"])
+    created = await _order(client)
+    assert created.status_code == 201, created.text
+    number, token = created.json()["order_number"], created.json()["token"]
+    order_url = f"/api/v1/orders/{number}"
+    original = await client.get(order_url, params={"t": token})
+    assert original.status_code == 200
+
+    product_url = f"/api/v1/admin/products/{catalog.products['gf-cookie']}"
+    removed = await client.delete(product_url, headers=admin_headers)
+    assert removed.status_code == 204, removed.text
+    assert (await client.get(product_url, headers=admin_headers)).status_code == 404
+    catalog_page = await client.get(
+        "/api/v1/admin/products", headers=admin_headers, params={"category_id": catalog.category_id}
+    )
+    assert catalog_page.status_code == 200
+    assert catalog.products["gf-cookie"] not in {item["id"] for item in catalog_page.json()["items"]}
+    archived = await client.get(order_url, params={"t": token})
+    assert archived.status_code == 200
+    assert archived.json()["items"] == original.json()["items"]
+
+
 # --- 3. Окна по способу, 7 дней, объяснение срока ---
 
 

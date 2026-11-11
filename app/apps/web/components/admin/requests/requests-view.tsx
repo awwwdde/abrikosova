@@ -5,7 +5,7 @@
  * счётчиками, строки-карточки, липкая карточка справа, `/admin/consultations/[id]`.
  */
 
-import { CalendarBlank, CaretLeft, Cake, Funnel } from "@phosphor-icons/react";
+import { CalendarBlank, CaretLeft, Cake, Funnel, Gear } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,6 +15,7 @@ import { RequestCard, RequestCardEmpty } from "@/components/admin/requests/reque
 import {
   Avatar,
   Button,
+  ButtonLink,
   ColumnLabel,
   EmptyState,
   FilterMenu,
@@ -54,7 +55,7 @@ const OCCASIONS = [
 ];
 
 export function RequestsView({ selectedId }: { selectedId: number | null }) {
-  const { authFetch } = useAdminAuth();
+  const { authFetch, user } = useAdminAuth();
   const { refresh: refreshCounters } = useCounters();
   const router = useRouter();
   const params = useSearchParams();
@@ -126,6 +127,15 @@ export function RequestsView({ selectedId }: { selectedId: number | null }) {
         <div
           className={`flex flex-wrap items-center gap-2.5 ${listHidden ? "max-adm-lg:hidden" : ""}`}
         >
+          {user?.role === "owner" ? (
+            <ButtonLink
+              href="/admin/consultations/mail"
+              variant="outline"
+              icon={<Gear aria-hidden="true" size={18} />}
+            >
+              Настройки
+            </ButtonLink>
+          ) : null}
           <FilterMenu
             label="Повод"
             icon={<Cake size={17} />}

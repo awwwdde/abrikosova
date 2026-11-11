@@ -81,7 +81,7 @@ async def list_products(
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> Page[ProductAdminListItem]:
     """Каталог с фильтрами (011e): поиск, раздел → подраздел, наличие, видимость."""
-    query = select(Product)
+    query = select(Product).where(Product.is_archived.is_(False))
     if search and search.strip():
         query = query.where(Product.name.ilike(_like(search.strip()), escape="\\"))
     if category_id is not None:
@@ -156,7 +156,14 @@ async def bulk_update_products(
     «было → стало»: в ленте видно, что именно скрыли, а не «изменено 12 товаров».
     Переключатель «на сайте» в строке списка — тот же запрос с одним id.
     """
-    products = list((await session.scalars(select(Product).where(Product.id.in_(data.ids)))).all())
+    products = (
+        await session.scalars(
+            select(Product)
+            .where(Product.id.in_(data.ids), Product.is_archived.is_(False))
+            .order_by(Product.id)
+            .with_for_update()
+        )
+    ).all()
     if len(products) != len(set(data.ids)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Часть товаров не найдена"

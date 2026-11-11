@@ -1,11 +1,4 @@
-/**
- * Пользовательское соглашение (010b, раскладка — components/legal-page.tsx).
- *
- * ЧЕРНОВИК СТРУКТУРЫ: финальный текст предоставляет заказчик. Видимая плашка
- * об этом убрана со страницы — заметка для нас, а не для посетителя.
- */
-
-import { LegalPage, loadLegal } from "@/components/legal-page";
+import { LegalPage } from "@/components/legal-page";
 import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -17,40 +10,6 @@ export const metadata = pageMetadata({
   path: "/terms",
 });
 
-export default async function TermsPage() {
-  const { legal } = await loadLegal();
-  return (
-    <LegalPage
-      title="Пользовательское соглашение"
-      revisedAt={legal?.content.terms_revised_at}
-      sections={[
-        {
-          title: "Предмет соглашения",
-          body: <p>Условия использования сайта и порядок оформления заказов.</p>,
-        },
-        {
-          title: "Порядок использования сайта",
-          body: (
-            <p>
-              Сайт предназначен для ознакомления с ассортиментом и оформления заказов без
-              регистрации.
-            </p>
-          ),
-        },
-        {
-          title: "Заказы и оплата",
-          body: (
-            <p>
-              Оплата на сайте не принимается — расчёт при получении или по договорённости.
-              Информация на сайте не является публичной офертой.
-            </p>
-          ),
-        },
-        {
-          title: "Ограничение ответственности",
-          body: <p>Пределы ответственности сторон определяются законодательством РФ.</p>,
-        },
-      ]}
-    />
-  );
+export default function TermsPage() {
+  return <LegalPage document="terms" />;
 }

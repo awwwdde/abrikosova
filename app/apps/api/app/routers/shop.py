@@ -169,7 +169,7 @@ async def _create_request(
     )
     await session.commit()
 
-    background.add_task(notifications.notify_new_request, request_row.id, source.value, phone)
+    background.add_task(notifications.notify_new_request, request_row.id)
     background.add_task(
         telegram.notify_new_request, request_row.id, source.value, phone, request_row.name
     )

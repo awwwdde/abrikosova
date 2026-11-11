@@ -57,6 +57,7 @@ import {
   pageSchema,
   serverErrors,
   setAt,
+  withLegalDefaults,
   zodErrors,
   type PageKey,
   type PageValue,
@@ -82,6 +83,7 @@ function TextField({
     path: string;
     label: string;
     multiline?: boolean;
+    rows?: number;
     hint?: string;
     inputMode?: "decimal" | "numeric" | "url";
     type?: "date";
@@ -106,7 +108,7 @@ function TextField({
         spec.multiline ? (
           <Textarea
             {...a11y}
-            rows={3}
+            rows={spec.rows ?? 3}
             value={text}
             onChange={(event) => onChange(event.target.value)}
           />
@@ -271,6 +273,9 @@ function BlockField({
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-1 text-[13.5px] font-bold">{spec.label}</legend>
       {spec.hint ? <p className="text-[12.5px] text-admin-muted">{spec.hint}</p> : null}
+      {errors[spec.path] ? (
+        <p className="text-[13px] text-admin-side">{errors[spec.path]}</p>
+      ) : null}
       {items.map((item, index) => {
         const base = `${spec.path}.${index}`;
         const title = `${spec.itemLabel} ${index + 1}`;
@@ -318,6 +323,7 @@ function BlockField({
                     path,
                     label: field.label,
                     multiline: field.multiline,
+                    rows: field.rows,
                     inputMode: field.inputMode,
                   }}
                   value={getAt(value, path)}
@@ -382,8 +388,9 @@ export function PageEditor() {
       const page = await authFetch<PageValue>(`/admin/pages/${key}`);
       const { page_key: _ignored, ...rest } = page;
       void _ignored;
-      setValue(rest);
-      setInitial(JSON.stringify(rest));
+      const loaded = key === "legal" ? withLegalDefaults(rest) : rest;
+      setValue(loaded);
+      setInitial(JSON.stringify(loaded));
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Не удалось загрузить страницу");
     }
@@ -430,8 +437,9 @@ export function PageEditor() {
       });
       const { page_key: _ignored, ...rest } = saved;
       void _ignored;
-      setValue(rest);
-      setInitial(JSON.stringify(rest));
+      const loaded = key === "legal" ? withLegalDefaults(rest) : rest;
+      setValue(loaded);
+      setInitial(JSON.stringify(loaded));
       setErrors({});
       toast.success("Страница сохранена. Сайт обновится в течение минуты");
     } catch (err) {
@@ -478,7 +486,7 @@ export function PageEditor() {
             {dirty ? "Есть несохранённые изменения" : "Все изменения сохранены"}
           </span>
           <a
-            href={tab.href}
+            href={block.href ?? tab.href}
             target="_blank"
             rel="noopener"
             className="inline-flex h-11 items-center gap-2 rounded-admin-control bg-admin-card px-4 text-sm font-bold text-admin-ink no-underline shadow-admin-card hover:bg-admin-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-side"

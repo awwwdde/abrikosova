@@ -6,6 +6,7 @@
  */
 
 import type { PageKey } from "@/lib/page-editor";
+import { LEGAL_DOCUMENTS, type LegalDocumentKey } from "@/lib/legal-documents";
 
 export type FieldSpec =
   | {
@@ -37,6 +38,7 @@ export type FieldSpec =
         key: string;
         label: string;
         multiline?: boolean;
+        rows?: number;
         inputMode?: "url";
         kind?: "image";
       }[];
@@ -47,6 +49,7 @@ export type FieldSpec =
 export type BlockSpec = {
   id: string;
   label: string;
+  href?: string;
   /** Блок — необязательный объект в content: пока его нет, сайт берёт текст макета */
   optionalObject?: { path: string; empty: unknown };
   fields: FieldSpec[];
@@ -78,33 +81,33 @@ const INTRO = (id: string, label: string): BlockSpec => ({
   ],
 });
 
-const LEGAL_BLOCKS: BlockSpec[] = [
-  {
-    id: "revisions",
-    label: "Редакции документов",
-    note: "«Редакция от …» под заголовком документа. Сами тексты меняет разработчик вместе с юристом; оператор персональных данных — из реквизитов на вкладке «Контакты».",
+const LEGAL_BLOCKS: BlockSpec[] = (Object.keys(LEGAL_DOCUMENTS) as LegalDocumentKey[]).map(
+  (key) => ({
+    id: key,
+    label: LEGAL_DOCUMENTS[key].title,
+    href: LEGAL_DOCUMENTS[key].href,
     fields: [
       {
         kind: "text",
         type: "date",
-        path: "content.privacy_revised_at",
-        label: "Политика конфиденциальности",
+        path: `content.${key}_revised_at`,
+        label: "Дата редакции",
       },
       {
-        kind: "text",
-        type: "date",
-        path: "content.terms_revised_at",
-        label: "Пользовательское соглашение",
-      },
-      {
-        kind: "text",
-        type: "date",
-        path: "content.consent_revised_at",
-        label: "Согласие на обработку персональных данных",
+        kind: "objects",
+        path: `content.${key}_sections`,
+        label: "Разделы документа",
+        itemLabel: "Раздел",
+        max: 30,
+        hint: "Абзацы разделяйте пустой строкой. Подстановки {{оператор}}, {{политика}} и {{согласие}} добавляют реквизиты из «Контактов» или ссылку на документ.",
+        fields: [
+          { key: "title", label: "Заголовок" },
+          { key: "text", label: "Текст", multiline: true, rows: 6 },
+        ],
       },
     ],
-  },
-];
+  }),
+);
 
 export const PAGE_BLOCKS: Record<PageKey, BlockSpec[]> = {
   home: [

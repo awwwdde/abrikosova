@@ -1740,6 +1740,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/consultation-mailboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Request Mailboxes */
+        get: operations["list_request_mailboxes_api_v1_admin_consultation_mailboxes_get"];
+        put?: never;
+        /** Add Request Mailbox */
+        post: operations["add_request_mailbox_api_v1_admin_consultation_mailboxes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/consultation-mailboxes/{mailbox_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Request Mailbox */
+        delete: operations["delete_request_mailbox_api_v1_admin_consultation_mailboxes__mailbox_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/journal": {
         parameters: {
             query?: never;
@@ -3747,12 +3782,7 @@ export interface components {
         };
         /**
          * LegalContent
-         * @description Правовые документы (010b): «Редакция от …» под заголовком каждого.
-         *
-         *     Тексты документов — в коде страниц: их правит юрист вместе с разработчиком,
-         *     а не редактор. Имя оператора ПДн — из реквизитов контактов (`legal.name`),
-         *     чтобы исправлять его в одном месте. Дата — то, что меняется при каждой
-         *     новой редакции, поэтому она здесь.
+         * @description Тексты и даты редакций. Старые записи могут содержать только даты.
          */
         LegalContent: {
             /** Privacy Revised At */
@@ -3761,6 +3791,12 @@ export interface components {
             terms_revised_at?: string | null;
             /** Consent Revised At */
             consent_revised_at?: string | null;
+            /** Privacy Sections */
+            privacy_sections?: components["schemas"]["LegalSection"][] | null;
+            /** Terms Sections */
+            terms_sections?: components["schemas"]["LegalSection"][] | null;
+            /** Consent Sections */
+            consent_sections?: components["schemas"]["LegalSection"][] | null;
         };
         /**
          * LegalInfo
@@ -3778,7 +3814,7 @@ export interface components {
         };
         /**
          * LegalPageOut
-         * @description `GET /pages/legal`: даты редакции правовых документов (010b).
+         * @description `GET /pages/legal`: тексты и даты редакций документов.
          */
         LegalPageOut: {
             page_key: components["schemas"]["PageKey"];
@@ -3803,6 +3839,16 @@ export interface components {
             yandex_maps_url?: string | null;
             /** Telegram Url */
             telegram_url?: string | null;
+        };
+        /**
+         * LegalSection
+         * @description Заголовок и текст раздела документа.
+         */
+        LegalSection: {
+            /** Title */
+            title: string;
+            /** Text */
+            text: string;
         };
         /**
          * LoginPhotoOut
@@ -4948,6 +4994,50 @@ export interface components {
              * @default Заявка отправлена, свяжемся с вами в ближайшее время
              */
             message: string;
+        };
+        /** RequestMailSettings */
+        RequestMailSettings: {
+            /** Mailboxes */
+            mailboxes: components["schemas"]["RequestMailboxOut"][];
+            /** Server Mail Enabled */
+            server_mail_enabled: boolean;
+        };
+        /** RequestMailboxIn */
+        RequestMailboxIn: {
+            /**
+             * Recipient
+             * Format: email
+             */
+            recipient: string;
+            /**
+             * Sender
+             * Format: email
+             */
+            sender: string;
+            /** Host */
+            host: string;
+            /**
+             * Port
+             * @enum {integer}
+             */
+            port: 465 | 587;
+            /** Username */
+            username: string;
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
+        };
+        /** RequestMailboxOut */
+        RequestMailboxOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Recipient */
+            recipient: string | null;
         };
         /**
          * RequestOccasion
@@ -8827,6 +8917,88 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SearchResults"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_request_mailboxes_api_v1_admin_consultation_mailboxes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestMailSettings"];
+                };
+            };
+        };
+    };
+    add_request_mailbox_api_v1_admin_consultation_mailboxes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestMailboxIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestMailboxOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_request_mailbox_api_v1_admin_consultation_mailboxes__mailbox_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mailbox_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

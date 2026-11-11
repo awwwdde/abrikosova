@@ -111,6 +111,9 @@ class Product(Base, TimestampMixin):
     subcategory_id: Mapped[int] = mapped_column(ForeignKey("subcategories.id"), nullable=False)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
     description: Mapped[str] = mapped_column(Text, nullable=False)
     composition: Mapped[str] = mapped_column(Text, nullable=False)
     # Подзаголовок на странице товара: «Тонкие медовые коржи и сметанный крем»

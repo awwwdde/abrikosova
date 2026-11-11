@@ -3,6 +3,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
@@ -58,6 +60,14 @@ app = FastAPI(
     openapi_url=None if _is_prod else "/openapi.json",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    if request.url.path.rstrip("/") == "/api/v1/admin/consultation-mailboxes":
+        # Стандартный ответ 422 включает исходные значения полей.
+        return JSONResponse({"detail": "Проверьте поля настройки почты"}, status_code=422)
+    return await request_validation_exception_handler(request, exc)
 
 
 @app.exception_handler(IntegrityError)
