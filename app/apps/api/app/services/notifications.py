@@ -6,8 +6,8 @@
 Отправка вызывается через FastAPI BackgroundTasks: ответ клиенту не ждёт SMTP,
 отдельный воркер и очередь не нужны (00-overview.md, примечание про фоновые задачи).
 
-Для заявок владелец выбирает почтовые ящики в админке. В уведомлении только
-номер заявки и ссылка на карточку, для открытия которой нужен вход.
+Для заказов и заявок владелец выбирает почтовые ящики в админке. В уведомлении
+только номер и ссылка на карточку, для открытия которой нужен вход.
 """
 
 import asyncio
@@ -21,11 +21,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.services import request_mail
+from app.services.order_email import BAKERY, _env
 
 logger = logging.getLogger(__name__)
 
 
-def _send(subject: str, body: str) -> None:
+def _send(subject: str, body: str, html: str) -> None:
     settings = get_settings()
 
     if not (settings.smtp_host and settings.notify_email_to):
@@ -37,6 +38,7 @@ def _send(subject: str, body: str) -> None:
     message["From"] = settings.smtp_from or settings.smtp_user or "noreply@localhost"
     message["To"] = settings.notify_email_to
     message.set_content(body)
+    message.add_alternative(html, subtype="html")
 
     try:
         context = ssl.create_default_context()
@@ -59,38 +61,52 @@ def _send(subject: str, body: str) -> None:
     logger.info("Отправлено уведомление «%s»", subject)
 
 
-def notify_new_order(
-    order_number: str, total: str, phone: str, delivery: str, when: str | None = None
-) -> None:
-    _send(
-        subject=f"Новый заказ {order_number}",
-        body=(
-            f"Поступил новый заказ {order_number}.\n"
-            f"Сумма: {total} ₽\n"
-            f"Способ получения: {delivery}\n"
-            f"Когда: {when or 'не указано'}\n"
-            f"Телефон клиента: {phone}\n\n"
-            f"Детали — в админ-панели, раздел «Заказы»."
-        ),
+async def notify_new_order(order_id: int, order_number: str) -> None:
+    await _notify(
+        "Заказ из каталога",
+        order_number,
+        f"/admin/orders/{order_id}",
+        "Открыть заказ",
     )
 
 
 async def notify_new_request(request_id: int) -> None:
-    site_url = get_settings().site_url.rstrip("/")
-    subject = f"Новая заявка #{request_id}"
-    body = (
-        f"Поступила новая заявка #{request_id}.\n\n"
-        f"Открыть в админке: {site_url}/admin/consultations/{request_id}"
+    await _notify(
+        "Обращение с сайта",
+        str(request_id),
+        f"/admin/consultations/{request_id}",
+        "Открыть обращение",
     )
+
+
+async def notify_custom_cake(request_id: int, request_number: str) -> None:
+    await _notify(
+        "Торт на заказ",
+        request_number,
+        f"/admin/consultations/{request_id}",
+        "Открыть заявку",
+    )
+
+
+async def _notify(title: str, number: str, admin_path: str, action: str) -> None:
+    site_url = get_settings().site_url.rstrip("/")
+    admin_url = f"{site_url}{admin_path}"
+    subject = f"{title} № {number}"
+    body = f"{BAKERY}\n\n{subject}\n\n{action} в админке: {admin_url}"
     try:
         async with SessionLocal() as session:
             mailboxes = await request_mail.load_for_delivery(session)
     except SQLAlchemyError:
-        logger.error("Не удалось загрузить настройки почты для заявок")
+        logger.error("Не удалось загрузить настройки почтовых уведомлений")
         return
+    if mailboxes == []:
+        return
+    html = _env.get_template("admin_notification.html").render(
+        bakery=BAKERY, title=title, number=number, admin_url=admin_url, action=action
+    )
     if mailboxes is None:
-        await asyncio.to_thread(_send, subject, body)
-    elif mailboxes:
+        await asyncio.to_thread(_send, subject, body, html)
+    else:
         await asyncio.gather(
-            *(asyncio.to_thread(request_mail.send, data, subject, body) for data in mailboxes)
+            *(asyncio.to_thread(request_mail.send, data, subject, body, html) for data in mailboxes)
         )

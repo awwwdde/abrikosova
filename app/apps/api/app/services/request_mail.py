@@ -150,12 +150,13 @@ async def verify(data: RequestMailboxIn) -> None:
     await asyncio.to_thread(connect)
 
 
-def send(data: RequestMailboxIn, subject: str, body: str) -> None:
+def send(data: RequestMailboxIn, subject: str, body: str, html: str) -> None:
     message = EmailMessage()
     message["From"] = data.sender
     message["To"] = data.recipient
     message["Subject"] = subject
     message.set_content(body)
+    message.add_alternative(html, subtype="html")
     try:
         with _PublicSMTP(data.host, data.port) as smtp:
             smtp.authenticate(data)

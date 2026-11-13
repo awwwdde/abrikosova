@@ -669,14 +669,7 @@ async def _place_order(
     await session.commit()
 
     when = _order_when(order)
-    background.add_task(
-        notifications.notify_new_order,
-        order.order_number,
-        str(order.total_price),
-        order.customer_phone,
-        order.delivery_method.value,
-        when,
-    )
+    background.add_task(notifications.notify_new_order, order.id, order.order_number)
     background.add_task(
         telegram.notify_new_order,
         order.order_number,

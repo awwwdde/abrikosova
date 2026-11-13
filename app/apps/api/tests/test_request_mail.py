@@ -38,10 +38,12 @@ async def test_owner_adds_two_encrypted_mailboxes_and_removes_one(
         pass
 
     delivered = []
+
+    def send(data, subject, body, html):
+        delivered.append((data.recipient, subject, body, html))
+
     monkeypatch.setattr(request_mail, "verify", verify)
-    monkeypatch.setattr(
-        request_mail, "send", lambda data, _subject, body: delivered.append((data.recipient, body))
-    )
+    monkeypatch.setattr(request_mail, "send", send)
 
     assert (await client.get(ENDPOINT, headers=manager_headers)).status_code == 403
     assert (await client.post(ENDPOINT, headers=manager_headers, json=PAYLOAD)).status_code == 403
@@ -72,15 +74,27 @@ async def test_owner_adds_two_encrypted_mailboxes_and_removes_one(
             assert PAYLOAD[field] not in stored
 
     await notifications.notify_new_request(42)
-    assert {address for address, _ in delivered} == {"first@example.com", "second@example.com"}
-    assert all("/admin/consultations/42" in body for _, body in delivered)
+    assert {address for address, *_ in delivered} == {"first@example.com", "second@example.com"}
+    assert all("/admin/consultations/42" in body for _, _, body, _ in delivered)
+    delivered.clear()
+
+    await notifications.notify_new_order(123, "20261111-ABC")
+    assert {address for address, *_ in delivered} == {"first@example.com", "second@example.com"}
+    for _, subject, body, html in delivered:
+        assert subject == "Заказ из каталога № 20261111-ABC"
+        assert "/admin/orders/123" in body and "/admin/orders/123" in html
+        assert "Заказ из каталога" in html
     delivered.clear()
 
     url = f"{ENDPOINT}/{first['id']}"
     assert (await client.delete(url, headers=manager_headers)).status_code == 403
     assert (await client.delete(url, headers=admin_headers)).status_code == 204
-    await notifications.notify_new_request(43)
-    assert [address for address, _ in delivered] == ["second@example.com"]
+    await notifications.notify_custom_cake(43, "З-20261111-ABC")
+    [(address, subject, body, html)] = delivered
+    assert address == "second@example.com"
+    assert subject == "Торт на заказ № З-20261111-ABC"
+    assert "/admin/consultations/43" in body and "/admin/consultations/43" in html
+    assert "Торт на заказ" in html
 
 
 @pytest.mark.parametrize("address", ["127.0.0.1", "10.0.0.1", "169.254.169.254", "::1"])

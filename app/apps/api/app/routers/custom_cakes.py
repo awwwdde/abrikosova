@@ -506,7 +506,7 @@ async def create_consultation(
         )
         if part
     )
-    background.add_task(notifications.notify_new_request, row.id)
+    background.add_task(notifications.notify_custom_cake, row.id, row.number)
     background.add_task(
         telegram.notify_new_request, row.id, row.source.value, row.phone, row.name, details
     )

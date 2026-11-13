@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} № {{ number }}</title>
+</head>
+<body style="margin:0;padding:0;background:#fbf7f0;color:#1a1210;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbf7f0;">
+    <tr>
+      <td align="center" style="padding:28px 12px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e5dccb;">
+          <tr>
+            <td style="padding:20px 24px;background:#842124;color:#fff8ea;font-family:Georgia,serif;font-size:19px;line-height:26px;">
+              {{ bakery }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 24px;">
+              <h1 style="margin:0;color:#842124;font-family:Georgia,serif;font-size:30px;line-height:36px;font-weight:normal;">{{ title }}</h1>
+              <p style="margin:10px 0 24px;font-size:16px;line-height:24px;color:#5a524f;">№ {{ number }}</p>
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td bgcolor="#842124" style="background:#842124;">
+                    <a href="{{ admin_url }}" style="display:inline-block;padding:13px 20px;color:#ffffff;font-size:15px;line-height:22px;font-weight:bold;text-decoration:none;">{{ action }}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px;border-top:1px solid #e5dccb;background:#fbf7f0;color:#5a524f;font-size:13px;line-height:20px;">
+              Подробности доступны после входа в админку.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

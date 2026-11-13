@@ -27,7 +27,7 @@ type MailSettings = components["schemas"]["RequestMailSettings"];
 
 export default function RequestMailPage() {
   const { authFetch, user } = useAdminAuth();
-  useBreadcrumbTrail([{ label: "Почта для заявок" }]);
+  useBreadcrumbTrail([{ label: "Почта для заказов и заявок" }]);
   const toast = useToast();
   const [settings, setSettings] = useState<MailSettings | null>(null);
   const [adding, setAdding] = useState(false);
@@ -112,7 +112,7 @@ export default function RequestMailPage() {
           Заявки
         </ButtonLink>
         <h1 className="font-display text-[34px] leading-tight adm-sm:text-[42px]">
-          Почта для заявок
+          Почта для заказов и заявок
         </h1>
       </div>
       {user && !owner ? <Notice>Настройки почты доступны владельцу.</Notice> : null}
@@ -127,9 +127,9 @@ export default function RequestMailPage() {
       {owner && !settings && !error ? <Skeleton className="h-36" /> : null}
       {owner && settings ? (
         <Card className="flex flex-col gap-4">
-          <CardHeader title="Куда приходят заявки" />
+          <CardHeader title="Получатели уведомлений" />
           <p className="text-sm text-admin-muted">
-            На каждый адрес придёт номер новой заявки и ссылка на неё в админке.
+            На каждый адрес придёт номер нового заказа или заявки и ссылка на карточку в админке.
           </p>
           {settings.mailboxes.length ? (
             <ul className="divide-y divide-admin-line">
@@ -155,7 +155,7 @@ export default function RequestMailPage() {
             <p className="text-sm text-admin-muted">
               {settings.server_mail_enabled
                 ? "Пока используется почта, заданная на сервере. Первый добавленный адрес её заменит."
-                : "Почта пока не подключена. Новые заявки видны в админке."}
+                : "Почта пока не подключена. Новые заказы и заявки видны в админке."}
             </p>
           )}
           {!adding ? (
@@ -181,7 +181,7 @@ export default function RequestMailPage() {
         <Card className="flex flex-col gap-4">
           <CardHeader title="Подключить почту" />
           <form onSubmit={add} autoComplete="off" className="flex flex-col gap-4">
-            <Field label="Куда отправлять заявки" hint="Адрес, на который должны приходить письма.">
+            <Field label="Адрес получателя" hint="На эту почту будут приходить уведомления.">
               {(a11y) => <Input {...a11y} name="recipient" type="email" required maxLength={254} />}
             </Field>
             <Field
@@ -252,7 +252,7 @@ export default function RequestMailPage() {
       <ConfirmDialog
         open={removing !== null}
         title="Удалить почту?"
-        text="Новые заявки перестанут приходить на этот адрес."
+        text="Уведомления о новых заказах и заявках перестанут приходить на этот адрес."
         loading={busy}
         onConfirm={() => void remove()}
         onClose={() => setRemoving(null)}
